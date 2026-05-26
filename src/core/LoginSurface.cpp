@@ -8,6 +8,7 @@
 #include <KConfig>
 #include <KConfigGroup>
 #include <QFile>
+#include <QFileInfo>
 #include <QTemporaryFile>
 #include <QUrl>
 
@@ -18,18 +19,29 @@ const QString kWallpaper = QStringLiteral("Wallpaper");
 const QString kImagePlugin = QStringLiteral("org.kde.image");
 const QString kGeneral = QStringLiteral("General");
 const QString kImageKey = QStringLiteral("Image");
-const QString kDefaultConfigPath = QStringLiteral("/etc/plasmalogin.conf");
+const QString kHostConfigPath = QStringLiteral("/etc/plasmalogin.conf");
+const QString kFlatpakInfoMarker = QStringLiteral("/.flatpak-info");
+const QString kFlatpakHostReadPath = QStringLiteral("/run/host/etc/plasmalogin.conf");
 }
 
 LoginSurface::LoginSurface(PrivilegedWriter *writer, QObject *parent)
-    : LoginSurface(writer, defaultConfigPath(), parent)
+    : LoginSurface(writer, defaultReadPath(), defaultWritePath(), parent)
 {
 }
 
 LoginSurface::LoginSurface(PrivilegedWriter *writer, const QString &configPath, QObject *parent)
+    : LoginSurface(writer, configPath, configPath, parent)
+{
+}
+
+LoginSurface::LoginSurface(PrivilegedWriter *writer,
+                            const QString &readPath,
+                            const QString &writePath,
+                            QObject *parent)
     : WallpaperSurface(parent)
     , m_writer(writer)
-    , m_configPath(configPath)
+    , m_readPath(readPath)
+    , m_writePath(writePath)
 {
     wireWriterSignals();
 }
@@ -46,14 +58,32 @@ QString LoginSurface::displayName() const
     return tr("Login screen");
 }
 
-QString LoginSurface::defaultConfigPath()
+QString LoginSurface::defaultReadPath()
 {
-    return kDefaultConfigPath;
+    // Native install: /etc/plasmalogin.conf is the host's file.
+    // Flatpak: /etc/ inside the sandbox is the runtime's /etc, NOT
+    // the host's. With --filesystem=host:ro the host's /etc/ is
+    // bind-mounted at /run/host/etc/. Detect Flatpak via the
+    // sentinel /.flatpak-info and route the read there.
+    if (QFileInfo::exists(kFlatpakInfoMarker)) {
+        return kFlatpakHostReadPath;
+    }
+    return kHostConfigPath;
+}
+
+QString LoginSurface::defaultWritePath()
+{
+    // The privileged helper runs on the host (or, under Flatpak,
+    // would-run via system D-Bus + polkit) and validates the path it
+    // writes to against the canonical /etc/plasmalogin.conf. So the
+    // write path is always the host-canonical path, regardless of
+    // where the client reads from.
+    return kHostConfigPath;
 }
 
 QString LoginSurface::currentImagePath() const
 {
-    KConfig config(m_configPath, KConfig::SimpleConfig);
+    KConfig config(m_readPath, KConfig::SimpleConfig);
     const KConfigGroup imageGroup = config.group(kGreeter)
                                         .group(kWallpaper)
                                         .group(kImagePlugin)
@@ -86,10 +116,10 @@ void LoginSurface::apply(const QString &imagePath)
     const QString stagingPath = staging.fileName();
     staging.close();
 
-    if (QFile::exists(m_configPath)) {
+    if (QFile::exists(m_readPath)) {
         QFile::remove(stagingPath);
-        if (!QFile::copy(m_configPath, stagingPath)) {
-            Q_EMIT applyFailed(tr("Cannot stage %1").arg(m_configPath));
+        if (!QFile::copy(m_readPath, stagingPath)) {
+            Q_EMIT applyFailed(tr("Cannot stage %1").arg(m_readPath));
             return;
         }
     }
@@ -115,7 +145,7 @@ void LoginSurface::apply(const QString &imagePath)
     const QByteArray contents = staged.readAll();
     staged.close();
 
-    m_writer->writeAtomically(m_configPath, contents);
+    m_writer->writeAtomically(m_writePath, contents);
 }
 
 void LoginSurface::wireWriterSignals()
@@ -125,7 +155,7 @@ void LoginSurface::wireWriterSignals()
     }
     connect(m_writer, &PrivilegedWriter::writeSucceeded,
             this, [this](const QString &path) {
-                if (path != m_configPath) {
+                if (path != m_writePath) {
                     return;
                 }
                 Q_EMIT currentImagePathChanged();
@@ -133,7 +163,7 @@ void LoginSurface::wireWriterSignals()
             });
     connect(m_writer, &PrivilegedWriter::writeFailed,
             this, [this](const QString &path, const QString &reason) {
-                if (path != m_configPath) {
+                if (path != m_writePath) {
                     return;
                 }
                 Q_EMIT applyFailed(reason);

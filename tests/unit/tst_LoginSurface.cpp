@@ -25,6 +25,7 @@ private Q_SLOTS:
     void applyKeepsExistingFileUrlPrefix();
     void applyEmitsFailedWhenWriterFails();
     void applyWorksWhenSourceFileMissing();
+    void readPathAndWritePathCanDiffer();
 
 private:
     QString copyFixtureToTemp(const QString &fixtureName);
@@ -154,6 +155,36 @@ void TestLoginSurface::applyWorksWhenSourceFileMissing()
     QVERIFY(writer.lastContents().contains("file:///home/test/first.png"));
 
     QFile::remove(temp);
+}
+
+void TestLoginSurface::readPathAndWritePathCanDiffer()
+{
+    // Flatpak case: the surface reads from /run/host/etc/... but the
+    // writer is told to write to /etc/... — that's the path the
+    // privileged helper validates against on the host. Verify the
+    // writer sees the write path, not the read path.
+    const QString readPath = copyFixtureToTemp(QStringLiteral("sample-plasmalogin.conf"));
+    QVERIFY(!readPath.isEmpty());
+    const QString writePath = QStringLiteral("/etc/plasmalogin.conf");
+
+    FakePrivilegedWriter writer;
+    LoginSurface s(&writer, readPath, writePath);
+
+    // Read still works through the read path.
+    QCOMPARE(s.currentImagePath(),
+             QStringLiteral("file:///var/lib/plasmalogin/wallpapers/initial-d-ae86.jpg"));
+
+    QSignalSpy success(&s, &WallpaperSurface::applySucceeded);
+    s.apply(QStringLiteral("/home/test/some.jpg"));
+
+    QCOMPARE(writer.callCount(), 1);
+    QCOMPARE(writer.lastPath(), writePath);
+
+    // Signal-forwarding filter keys on the write path, so the success
+    // signal propagated through too.
+    QCOMPARE(success.count(), 1);
+
+    QFile::remove(readPath);
 }
 
 QString TestLoginSurface::copyFixtureToTemp(const QString &fixtureName)
