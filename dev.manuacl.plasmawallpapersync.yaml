@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 Manuel Chamorro <manu.acl@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+#
+# Flatpak manifest — *build environment* role for v1.
+#
+# Distribution as a Flatpak is a v3 evolution (see CLAUDE.md): the
+# /etc/plasmalogin.conf privileged write doesn't play nicely with the
+# sandbox without a host-installed helper or a flatpak-spawn detour.
+# Until that's designed, this manifest exists so contributors on
+# rpm-ostree atomic distros (Bazzite, Silverblue, …) can build and
+# test the project without polluting the host base layer, against the
+# exact Qt6 + KF6 versions targeted by Plasma 6.
+
+app-id: dev.manuacl.plasmawallpapersync
+runtime: org.kde.Platform
+runtime-version: '6.10'
+sdk: org.kde.Sdk
+command: plasma-wallpaper-sync
+
+# Aspirational finish-args, surfaced now so the privilege model is
+# visible early. Will be tightened (or relaxed) when the standalone
+# shell module lands.
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --filesystem=xdg-config:rw
+  - --filesystem=xdg-pictures:ro
+  - --filesystem=home:ro
+  - --talk-name=org.kde.plasmashell
+  - --talk-name=org.kde.screensaver
+
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/man
+  - '*.la'
+  - '*.a'
+
+modules:
+  - name: plasma-wallpaper-sync
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Debug
+    builddir: true
+    # ctest runs after the build step.
+    run-tests: true
+    sources:
+      - type: dir
+        path: .

@@ -32,5 +32,9 @@ ui_*.h
 *.swp
 *.swo
 
+# Flatpak build state (dev/build.sh)
+.flatpak-app/
+.flatpak-builder/
+
 # OS
 .DS_Store
