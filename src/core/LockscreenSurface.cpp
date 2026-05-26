@@ -5,7 +5,7 @@
 
 #include <KConfig>
 #include <KConfigGroup>
-#include <QStandardPaths>
+#include <QDir>
 #include <QUrl>
 
 namespace
@@ -42,8 +42,10 @@ QString LockscreenSurface::displayName() const
 
 QString LockscreenSurface::defaultConfigPath()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-        + QStringLiteral("/kscreenlockerrc");
+    // Same rationale as DesktopSurface::defaultConfigPath — go through
+    // $HOME/.config rather than $XDG_CONFIG_HOME so the Flatpak sandbox
+    // doesn't redirect us to the per-app private dir.
+    return QDir::homePath() + QStringLiteral("/.config/kscreenlockerrc");
 }
 
 QString LockscreenSurface::currentImagePath() const

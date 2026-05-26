@@ -3,6 +3,7 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
@@ -10,15 +11,156 @@ Kirigami.ApplicationWindow {
     id: window
 
     title: qsTr("Plasma Wallpaper Sync")
-    minimumWidth: Kirigami.Units.gridUnit * 28
-    minimumHeight: Kirigami.Units.gridUnit * 36
+    minimumWidth: Kirigami.Units.gridUnit * 30
+    minimumHeight: Kirigami.Units.gridUnit * 40
+
+    // Picked-image and per-surface selection are ephemeral session
+    // state — no persistence on purpose. selectedSurfaceIds is a JS
+    // object keyed by surface id; toggleSurface swaps it whole so
+    // QML re-evaluates bindings that depend on it.
+    property url pickedImage: ""
+    property var selectedSurfaceIds: ({})
+
+    function toggleSurface(id, checked) {
+        const updated = Object.assign({}, selectedSurfaceIds);
+        if (checked) {
+            updated[id] = true;
+        } else {
+            delete updated[id];
+        }
+        selectedSurfaceIds = updated;
+    }
+
+    function selectedIds() {
+        return Object.keys(selectedSurfaceIds);
+    }
+
+    readonly property bool canApply: pickedImage !== ""
+                                     && selectedIds().length > 0
+                                     && !syncEngine.applying
+
+    FileDialog {
+        id: filePicker
+        title: qsTr("Pick a wallpaper image")
+        nameFilters: [qsTr("Images (*.jpg *.jpeg *.png *.webp *.bmp)")]
+        // Belt-and-suspenders with main.cpp's
+        // Qt::AA_DontUseNativeDialogs — keeps FileDialog away from
+        // the XDG FileChooser portal even if some Qt version stops
+        // honoring the global attribute on QtQuick.Dialogs.
+        options: FileDialog.DontUseNativeDialog
+        onAccepted: window.pickedImage = selectedFile
+    }
+
+    // Buffer per-surface failure reasons emitted during a batch so
+    // applyFinished can surface them alongside the failed-ids list.
+    property var failureReasons: ({})
+
+    Connections {
+        target: syncEngine
+        function onSurfaceApplyFailed(id, reason) {
+            const next = Object.assign({}, window.failureReasons);
+            next[id] = reason;
+            window.failureReasons = next;
+        }
+        function onApplyFinished(succeeded, failed) {
+            const reasons = window.failureReasons;
+            window.failureReasons = ({});
+
+            if (succeeded.length === 0 && failed.length === 0) {
+                return;
+            }
+            if (failed.length === 0) {
+                feedback.type = Kirigami.MessageType.Positive;
+                feedback.text = qsTr("Applied to: %1").arg(succeeded.join(", "));
+            } else {
+                const detailed = failed.map(id =>
+                    reasons[id] ? `${id} (${reasons[id]})` : id).join(", ");
+                if (succeeded.length === 0) {
+                    feedback.type = Kirigami.MessageType.Error;
+                    feedback.text = qsTr("Failed: %1").arg(detailed);
+                } else {
+                    feedback.type = Kirigami.MessageType.Warning;
+                    feedback.text = qsTr("Applied to %1; failed on %2")
+                        .arg(succeeded.join(", "))
+                        .arg(detailed);
+                }
+            }
+            feedback.visible = true;
+        }
+    }
 
     pageStack.initialPage: Kirigami.ScrollablePage {
         title: qsTr("Wallpaper surfaces")
 
+        actions: [
+            Kirigami.Action {
+                text: qsTr("Pick image…")
+                icon.name: "document-open"
+                onTriggered: filePicker.open()
+            },
+            Kirigami.Action {
+                text: qsTr("Apply")
+                icon.name: "dialog-ok-apply"
+                enabled: window.canApply
+                onTriggered: syncEngine.applyToSurfaces(
+                    window.pickedImage.toString(), window.selectedIds())
+            }
+        ]
+
         ColumnLayout {
             width: parent.width
             spacing: Kirigami.Units.largeSpacing
+
+            Kirigami.InlineMessage {
+                id: feedback
+                Layout.fillWidth: true
+                showCloseButton: true
+                visible: false
+            }
+
+            // Picked-image banner — shown once the user has chosen a file.
+            Pane {
+                visible: window.pickedImage !== ""
+                Layout.fillWidth: true
+
+                contentItem: RowLayout {
+                    spacing: Kirigami.Units.largeSpacing
+
+                    Rectangle {
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 6
+                        Layout.preferredHeight: Kirigami.Units.gridUnit * 6 * 9 / 16
+                        color: Kirigami.Theme.alternateBackgroundColor
+                        radius: Kirigami.Units.smallSpacing
+                        clip: true
+
+                        Image {
+                            anchors.fill: parent
+                            sourceSize.width: 320
+                            source: window.pickedImage
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Kirigami.Heading {
+                            level: 4
+                            text: qsTr("Selected wallpaper")
+                        }
+
+                        Label {
+                            Layout.fillWidth: true
+                            text: window.pickedImage.toString()
+                            elide: Text.ElideMiddle
+                            opacity: 0.7
+                            font.family: "monospace"
+                        }
+                    }
+                }
+            }
 
             Repeater {
                 model: syncEngine.surfaceIds
@@ -33,15 +175,23 @@ Kirigami.ApplicationWindow {
                     contentItem: ColumnLayout {
                         spacing: Kirigami.Units.smallSpacing
 
-                        Kirigami.Heading {
-                            level: 3
-                            text: card.surface ? card.surface.displayName : card.modelData
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Kirigami.Units.smallSpacing
+
+                            Kirigami.Heading {
+                                level: 3
+                                Layout.fillWidth: true
+                                text: card.surface ? card.surface.displayName : card.modelData
+                            }
+
+                            CheckBox {
+                                text: qsTr("Include")
+                                checked: !!window.selectedSurfaceIds[card.modelData]
+                                onToggled: window.toggleSurface(card.modelData, checked)
+                            }
                         }
 
-                        // 16:9 preview frame. The Image overlays the placeholder
-                        // Label only when Image.status === Ready, so missing /
-                        // failed / slow loads all surface as a readable
-                        // message instead of an empty rectangle.
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: width * 9 / 16
@@ -64,9 +214,6 @@ Kirigami.ApplicationWindow {
                             Image {
                                 id: preview
                                 anchors.fill: parent
-                                // Cap decode size — Plasma wallpapers can be 4K,
-                                // we render a thumbnail. Aspect ratio is
-                                // preserved automatically when only width is set.
                                 sourceSize.width: 480
                                 source: card.surface ? card.surface.currentImagePath : ""
                                 fillMode: Image.PreserveAspectCrop

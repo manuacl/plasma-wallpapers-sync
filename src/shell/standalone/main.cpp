@@ -12,6 +12,15 @@
 
 int main(int argc, char **argv)
 {
+    // Bypass the XDG FileChooser portal under Flatpak so FileDialog
+    // returns real host paths ("file:///home/user/Pictures/foo.jpg")
+    // instead of sandbox-scoped portal URLs
+    // ("file:///run/user/1000/doc/<token>/foo.jpg"). The portal path
+    // is read-only inside our sandbox; written back to a Plasma
+    // config file, it's unreachable by the host kscreenlocker /
+    // plasmashell processes, so the wallpaper never visibly updates.
+    QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
+
     QGuiApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("manuacl"));
     QCoreApplication::setOrganizationDomain(QStringLiteral("manuacl.dev"));

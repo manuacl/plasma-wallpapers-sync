@@ -84,6 +84,11 @@ void SyncEngine::applyToSurfaces(const QString &imagePath, const QStringList &ta
         return;
     }
 
+    // false → true; emitted before the first surface.apply() so a
+    // synchronous sequence (Desktop/Lockscreen) still produces an
+    // observable applyingChanged() pair around the batch.
+    Q_EMIT applyingChanged();
+
     for (auto *s : targets) {
         s->apply(imagePath);
     }
@@ -103,5 +108,6 @@ void SyncEngine::finishIfDone()
     const QStringList failed = std::move(m_failed);
     m_succeeded.clear();
     m_failed.clear();
+    Q_EMIT applyingChanged(); // true → false
     Q_EMIT applyFinished(succeeded, failed);
 }

@@ -20,6 +20,7 @@ private Q_SLOTS:
     void identityAndDisplayName();
     void readsCurrentImageFromFixture();
     void emptyImageWhenNoMatchingContainment();
+    void skipsPanelContainmentEvenWithWallpaperplugin();
     void applyWritesImageBackAsFileUrl();
     void applyKeepsExistingFileUrlPrefix();
     void applyFailsWhenNoContainment();
@@ -56,6 +57,19 @@ void TestDesktopSurface::emptyImageWhenNoMatchingContainment()
     empty.close();
     DesktopSurface s(empty.fileName());
     QCOMPARE(s.currentImagePath(), QString());
+}
+
+void TestDesktopSurface::skipsPanelContainmentEvenWithWallpaperplugin()
+{
+    // Regression for the "Applied to lockscreen, failed on desktop"
+    // bug: the panel containment carries wallpaperplugin=org.kde.image
+    // on a real Plasma 6 install too. Detection by Image-entry
+    // existence must skip it and land on the real desktop containment.
+    // Our fixture already has this shape (panel = [1], desktop = [2]);
+    // verify the returned image is the desktop's, not blank.
+    DesktopSurface s(fixturePath(QStringLiteral("sample-desktop-appletsrc.ini")));
+    QCOMPARE(s.currentImagePath(),
+             QStringLiteral("file:///home/test/Pictures/wallpaper1.jpg"));
 }
 
 void TestDesktopSurface::applyWritesImageBackAsFileUrl()

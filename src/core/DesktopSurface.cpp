@@ -5,7 +5,7 @@
 
 #include <KConfig>
 #include <KConfigGroup>
-#include <QStandardPaths>
+#include <QDir>
 #include <QUrl>
 
 namespace
@@ -15,8 +15,6 @@ const QString kWallpaper = QStringLiteral("Wallpaper");
 const QString kImagePlugin = QStringLiteral("org.kde.image");
 const QString kGeneral = QStringLiteral("General");
 const QString kImageKey = QStringLiteral("Image");
-const QString kPluginKey = QStringLiteral("plugin");
-const QString kDesktopContainment = QStringLiteral("org.kde.desktopcontainment");
 }
 
 DesktopSurface::DesktopSurface(QObject *parent)
@@ -44,17 +42,36 @@ QString DesktopSurface::displayName() const
 
 QString DesktopSurface::defaultConfigPath()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-        + QStringLiteral("/plasma-org.kde.plasma.desktop-appletsrc");
+    // Hard-target $HOME/.config rather than $XDG_CONFIG_HOME via
+    // QStandardPaths::ConfigLocation: the file we want is the
+    // user-wide Plasma config that the live session reads, which by
+    // convention lives in ~/.config/ regardless of XDG_CONFIG_HOME's
+    // value. Inside the Flatpak sandbox the runtime forces
+    // XDG_CONFIG_HOME to the per-app private dir even with
+    // --unset-env in finish-args, so the only reliable read/write
+    // path to the host's plasma config is $HOME/.config (bind-mounted
+    // via --filesystem=xdg-config).
+    return QDir::homePath() + QStringLiteral("/.config/plasma-org.kde.plasma.desktop-appletsrc");
 }
 
 QString DesktopSurface::findPrimaryContainmentId() const
 {
+    // Detect by structure rather than by the containment's `plugin` value:
+    // Plasma 5 used `org.kde.desktopcontainment`, Plasma 6 uses
+    // `org.kde.plasma.folder`, and the panel containment carries a
+    // `wallpaperplugin=org.kde.image` entry too even though it has no
+    // wallpaper. The reliable signal is the presence of a non-empty
+    // `[Wallpaper][org.kde.image][General]` subgroup with an `Image`
+    // entry — that only ever appears on actual desktop surfaces.
     KConfig config(m_configPath, KConfig::SimpleConfig);
     const KConfigGroup containments = config.group(kContainments);
     const QStringList ids = containments.groupList();
     for (const QString &id : ids) {
-        if (containments.group(id).readEntry(kPluginKey, QString()) == kDesktopContainment) {
+        const KConfigGroup imageGroup = containments.group(id)
+                                            .group(kWallpaper)
+                                            .group(kImagePlugin)
+                                            .group(kGeneral);
+        if (imageGroup.hasKey(kImageKey)) {
             return id;
         }
     }
