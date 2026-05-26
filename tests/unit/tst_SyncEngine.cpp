@@ -23,6 +23,9 @@ private Q_SLOTS:
     void applyFinishedReportsSuccessesAndFailures();
     void perSurfaceSignalsAreForwarded();
     void overlappingApplyIsIgnored();
+    void isApplyingFlipsAroundInFlightBatch();
+    void isApplyingStaysFalseOnEmptyBatch();
+    void isApplyingStillFlipsWithSyncSurfaces();
 };
 
 void TestSyncEngine::registrationAndLookup()
@@ -207,6 +210,63 @@ void TestSyncEngine::overlappingApplyIsIgnored()
     engine.applyToAll(QStringLiteral("/second"));
     QCOMPARE(finished.count(), 0);
     QVERIFY(engine.isApplying());
+}
+
+namespace
+{
+class StuckSurface : public WallpaperSurface
+{
+public:
+    explicit StuckSurface(const QString &id) : m_id(id) {}
+    QString id() const override { return m_id; }
+    QString displayName() const override { return m_id; }
+    QString currentImagePath() const override { return {}; }
+    void apply(const QString &) override { /* never emits — batch stays in flight */ }
+private:
+    QString m_id;
+};
+}
+
+void TestSyncEngine::isApplyingFlipsAroundInFlightBatch()
+{
+    StuckSurface stuck(QStringLiteral("stuck"));
+    SyncEngine engine;
+    engine.addSurface(&stuck);
+
+    QSignalSpy applyingSpy(&engine, &SyncEngine::applyingChanged);
+    QVERIFY(!engine.isApplying());
+
+    engine.applyToAll(QStringLiteral("/x"));
+    QVERIFY(engine.isApplying());
+    QCOMPARE(applyingSpy.count(), 1);
+}
+
+void TestSyncEngine::isApplyingStaysFalseOnEmptyBatch()
+{
+    SyncEngine engine;
+    QSignalSpy applyingSpy(&engine, &SyncEngine::applyingChanged);
+
+    engine.applyToSurfaces(QStringLiteral("/x"), {});
+    QVERIFY(!engine.isApplying());
+    QCOMPARE(applyingSpy.count(), 0);
+}
+
+void TestSyncEngine::isApplyingStillFlipsWithSyncSurfaces()
+{
+    // Even when every surface reports synchronously, the engine emits
+    // both transitions (false→true→false) so the GUI's "Apply disabled
+    // while applying" binding is reactive.
+    FakeSurface a(QStringLiteral("a"));
+    FakeSurface b(QStringLiteral("b"));
+    SyncEngine engine;
+    engine.addSurface(&a);
+    engine.addSurface(&b);
+
+    QSignalSpy applyingSpy(&engine, &SyncEngine::applyingChanged);
+    engine.applyToAll(QStringLiteral("/x"));
+
+    QVERIFY(!engine.isApplying());
+    QCOMPARE(applyingSpy.count(), 2);
 }
 
 QTEST_GUILESS_MAIN(TestSyncEngine)
