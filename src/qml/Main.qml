@@ -43,6 +43,11 @@ Kirigami.ApplicationWindow {
         id: filePicker
         title: qsTr("Pick a wallpaper image")
         nameFilters: [qsTr("Images (*.jpg *.jpeg *.png *.webp *.bmp)")]
+        // Belt-and-suspenders with main.cpp's
+        // Qt::AA_DontUseNativeDialogs — keeps FileDialog away from
+        // the XDG FileChooser portal even if some Qt version stops
+        // honoring the global attribute on QtQuick.Dialogs.
+        options: FileDialog.DontUseNativeDialog
         onAccepted: window.pickedImage = selectedFile
     }
 
