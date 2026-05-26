@@ -5,6 +5,8 @@ add_library(pws_core STATIC
     WallpaperSurface.cpp
     DesktopSurface.cpp
     LockscreenSurface.cpp
+    LoginSurface.cpp
+    PrivilegedWriter.cpp
 )
 
 target_link_libraries(pws_core

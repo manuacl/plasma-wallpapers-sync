@@ -3,8 +3,10 @@
 
 # Unit tests for the core layer — display-server-free (QTEST_GUILESS_MAIN).
 
+# Extra Q_OBJECT-bearing headers (fakes/mocks) must be passed in so
+# AUTOMOC discovers them and emits the corresponding vtables.
 function(pws_add_core_test name)
-    add_executable(${name} unit/${name}.cpp)
+    add_executable(${name} unit/${name}.cpp ${ARGN})
     target_link_libraries(${name}
         PRIVATE
             pws_core
@@ -20,3 +22,4 @@ endfunction()
 
 pws_add_core_test(tst_DesktopSurface)
 pws_add_core_test(tst_LockscreenSurface)
+pws_add_core_test(tst_LoginSurface unit/FakePrivilegedWriter.h)
