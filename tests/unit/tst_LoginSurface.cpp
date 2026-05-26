@@ -165,7 +165,13 @@ void TestLoginSurface::readPathAndWritePathCanDiffer()
     // writer sees the write path, not the read path.
     const QString readPath = copyFixtureToTemp(QStringLiteral("sample-plasmalogin.conf"));
     QVERIFY(!readPath.isEmpty());
-    const QString writePath = QStringLiteral("/etc/plasmalogin.conf");
+    // Per-test temp file rather than /etc/plasmalogin.conf — the
+    // FakePrivilegedWriter writes as the test user, which can't touch
+    // /etc on a real install. The point of the test is the surface's
+    // path-routing behavior, not the writer's actual filesystem reach.
+    const QString writePath = QDir::temp().filePath(
+        QStringLiteral("pws-test-write-target-plasmalogin.conf"));
+    QFile::remove(writePath);
 
     FakePrivilegedWriter writer;
     LoginSurface s(&writer, readPath, writePath);
@@ -185,6 +191,7 @@ void TestLoginSurface::readPathAndWritePathCanDiffer()
     QCOMPARE(success.count(), 1);
 
     QFile::remove(readPath);
+    QFile::remove(writePath);
 }
 
 QString TestLoginSurface::copyFixtureToTemp(const QString &fixtureName)
