@@ -1,0 +1,121 @@
+# SPDX-FileCopyrightText: 2026 Manuel Chamorro <manu.acl@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+
+name: Bump version
+
+# Triggers on push to main (= a PR has just been merged). Reads the
+# merged PR's bump:<level> label, bumps CMakeLists.txt's project()
+# VERSION accordingly, commits the change and creates the matching
+# git tag.
+#
+# No label = no bump: the workflow exits cleanly without touching
+# anything.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: version
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      # BUMP_TOKEN is a PAT (classic, scope=repo) owned by an admin.
+      # Required because the bump commit + tag push to main bypass the
+      # ruleset via the admin actor — the default GITHUB_TOKEN runs as
+      # github-actions[bot], which has no bypass and would be rejected
+      # by branch protection. See docs/releasing.md.
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.BUMP_TOKEN }}
+          fetch-depth: 0
+
+      - name: Skip if HEAD already tagged
+        id: check
+        run: |
+          if git describe --exact-match HEAD 2>/dev/null; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Find merged PR
+        if: steps.check.outputs.skip == 'false'
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          PR=$(gh pr list --state merged --base main --limit 5 --json number,mergeCommit \
+            --jq ".[] | select(.mergeCommit.oid == \"$COMMIT_SHA\") | .number")
+          echo "number=$PR" >> $GITHUB_OUTPUT
+
+      - name: Resolve bump type from PR label
+        if: steps.check.outputs.skip == 'false'
+        id: bump
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          TYPE=none
+          if [ -n "$PR_NUMBER" ]; then
+            LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '[.labels[].name] | join(",")')
+            if   echo "$LABELS" | grep -q "bump:major"; then TYPE=major
+            elif echo "$LABELS" | grep -q "bump:minor"; then TYPE=minor
+            elif echo "$LABELS" | grep -q "bump:patch"; then TYPE=patch
+            fi
+          fi
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+          echo "Bump type: $TYPE (PR #${PR_NUMBER:-none})"
+
+      - name: Bump VERSION in CMakeLists.txt
+        if: steps.check.outputs.skip == 'false' && steps.bump.outputs.type != 'none'
+        id: version
+        env:
+          BUMP_TYPE: ${{ steps.bump.outputs.type }}
+        run: |
+          CURRENT=$(grep -oP '^[[:space:]]+VERSION[[:space:]]+\K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | head -1)
+          if [ -z "$CURRENT" ]; then
+            echo "::error::Could not read VERSION from CMakeLists.txt"
+            exit 1
+          fi
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          case "$BUMP_TYPE" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+          NEW="$MAJOR.$MINOR.$PATCH"
+          sed -i "s/    VERSION $CURRENT/    VERSION $NEW/" CMakeLists.txt
+          if ! grep -q "    VERSION $NEW" CMakeLists.txt; then
+            echo "::error::sed did not update CMakeLists.txt (current=$CURRENT new=$NEW)"
+            exit 1
+          fi
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "new=$NEW" >> $GITHUB_OUTPUT
+          echo "Bumping $CURRENT → $NEW"
+
+      - name: Configure git
+        if: steps.check.outputs.skip == 'false' && steps.bump.outputs.type != 'none'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit, tag, push
+        if: steps.check.outputs.skip == 'false' && steps.bump.outputs.type != 'none'
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.new }}
+          BUMP_TYPE: ${{ steps.bump.outputs.type }}
+        run: |
+          git add CMakeLists.txt
+          git commit -m "chore: bump version to $NEW_VERSION ($BUMP_TYPE)"
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          git push origin HEAD:main
+          git push origin "v$NEW_VERSION"
