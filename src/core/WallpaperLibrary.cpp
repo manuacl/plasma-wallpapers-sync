@@ -114,16 +114,23 @@ void WallpaperLibrary::scanDir(const QString &dirPath)
         seenNames.insert(e.name);
     }
 
-    // Package wallpapers: <name>/contents/images/*.<ext>
     const QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    QSet<QString> packageSubdirs;
+
+    // Package wallpapers: <name>/contents/images/*.<ext>
     for (const QString &subdir : subdirs) {
         const QString imagesDir = dirPath + QLatin1Char('/') + subdir
             + QStringLiteral("/contents/images");
         const QString image = firstImageInDir(imagesDir);
-        if (!image.isEmpty() && !seenNames.contains(subdir)) {
-            m_entries.append({subdir, image, image});
-            seenNames.insert(subdir);
+        if (image.isEmpty()) {
+            continue;
         }
+        packageSubdirs.insert(subdir);
+        if (seenNames.contains(subdir)) {
+            continue;
+        }
+        m_entries.append({subdir, image, image});
+        seenNames.insert(subdir);
     }
 
     // Flat images: dropped directly under the search dir.
@@ -136,6 +143,27 @@ void WallpaperLibrary::scanDir(const QString &dirPath)
         const QString path = dirPath + QLatin1Char('/') + file;
         m_entries.append({name, path, path});
         seenNames.insert(name);
+    }
+
+    // Flat images inside a non-package subdir, one level deep —
+    // the common "I dumped a few images under ~/.local/share/wallpapers/<topic>/"
+    // user shape. Each image is its own entry, so the user picks the
+    // image, not the folder.
+    for (const QString &subdir : subdirs) {
+        if (packageSubdirs.contains(subdir)) {
+            continue;
+        }
+        QDir sub(dirPath + QLatin1Char('/') + subdir);
+        const QStringList subFiles = sub.entryList(kImageGlobs, QDir::Files, QDir::Name);
+        for (const QString &file : subFiles) {
+            const QString name = QFileInfo(file).completeBaseName();
+            if (seenNames.contains(name)) {
+                continue;
+            }
+            const QString path = sub.absoluteFilePath(file);
+            m_entries.append({name, path, path});
+            seenNames.insert(name);
+        }
     }
 }
 

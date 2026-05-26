@@ -24,6 +24,7 @@ private Q_SLOTS:
     void rolesExposeNamePreviewApplyAsFileUrls();
     void duplicateNamesAreDeduplicated();
     void reloadPicksUpNewlyAddedPackage();
+    void picksFlatImagesInsideOneLevelSubdir();
 
 private:
     static void createPackage(const QString &root, const QString &name, const QString &imageFile);
@@ -131,6 +132,34 @@ void TestWallpaperLibrary::duplicateNamesAreDeduplicated()
     const QString preview = lib.data(lib.index(0), WallpaperLibrary::PreviewPathRole).toString();
     QVERIFY(preview.contains(QStringLiteral("user.png")));
     QVERIFY(!preview.contains(QStringLiteral("system.png")));
+}
+
+void TestWallpaperLibrary::picksFlatImagesInsideOneLevelSubdir()
+{
+    // ~/.local/share/wallpapers/<topic>/<image>.<ext> is the common
+    // "I dumped images in a folder under the wallpapers dir" shape —
+    // not a KPackage structure, just regular files. Each image
+    // surfaces as its own entry; the parent folder isn't shown.
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    QVERIFY(QDir(tmp.path()).mkpath(QStringLiteral("Personal")));
+    QFile a(tmp.path() + QStringLiteral("/Personal/sunset.jpg"));
+    QVERIFY(a.open(QIODevice::WriteOnly));
+    a.close();
+    QFile b(tmp.path() + QStringLiteral("/Personal/forest.png"));
+    QVERIFY(b.open(QIODevice::WriteOnly));
+    b.close();
+
+    WallpaperLibrary lib;
+    lib.setSearchPaths({tmp.path()});
+
+    QCOMPARE(lib.rowCount(), 2);
+    QStringList names;
+    for (int i = 0; i < lib.rowCount(); ++i) {
+        names << lib.data(lib.index(i), WallpaperLibrary::NameRole).toString();
+    }
+    names.sort();
+    QCOMPARE(names, QStringList({QStringLiteral("forest"), QStringLiteral("sunset")}));
 }
 
 void TestWallpaperLibrary::reloadPicksUpNewlyAddedPackage()

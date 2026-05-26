@@ -27,6 +27,11 @@ finish-args:
   - --filesystem=xdg-config:rw
   - --filesystem=xdg-pictures:ro
   - --filesystem=home:ro
+  # System wallpapers are at /usr/share/wallpapers/ on the host but
+  # org.kde.Platform//6.10 doesn't ship them at the same path inside
+  # the sandbox, so the WallpaperLibrary scan misses them entirely.
+  # This grant pulls them in read-only.
+  - --filesystem=/usr/share/wallpapers:ro
   - --talk-name=org.kde.plasmashell
   - --talk-name=org.kde.screensaver
 
