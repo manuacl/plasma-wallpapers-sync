@@ -11,7 +11,7 @@ Kirigami.ApplicationWindow {
 
     title: qsTr("Plasma Wallpaper Sync")
     minimumWidth: Kirigami.Units.gridUnit * 28
-    minimumHeight: Kirigami.Units.gridUnit * 20
+    minimumHeight: Kirigami.Units.gridUnit * 36
 
     pageStack.initialPage: Kirigami.ScrollablePage {
         title: qsTr("Wallpaper surfaces")
@@ -36,6 +36,43 @@ Kirigami.ApplicationWindow {
                         Kirigami.Heading {
                             level: 3
                             text: card.surface ? card.surface.displayName : card.modelData
+                        }
+
+                        // 16:9 preview frame. The Image overlays the placeholder
+                        // Label only when Image.status === Ready, so missing /
+                        // failed / slow loads all surface as a readable
+                        // message instead of an empty rectangle.
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: width * 9 / 16
+                            color: Kirigami.Theme.alternateBackgroundColor
+                            radius: Kirigami.Units.smallSpacing
+                            clip: true
+
+                            Label {
+                                anchors.centerIn: parent
+                                opacity: 0.6
+                                text: {
+                                    if (!card.surface || !card.surface.currentImagePath)
+                                        return qsTr("(no wallpaper recorded)");
+                                    if (preview.status === Image.Loading)
+                                        return qsTr("Loading preview…");
+                                    return qsTr("Failed to load preview");
+                                }
+                            }
+
+                            Image {
+                                id: preview
+                                anchors.fill: parent
+                                // Cap decode size — Plasma wallpapers can be 4K,
+                                // we render a thumbnail. Aspect ratio is
+                                // preserved automatically when only width is set.
+                                sourceSize.width: 480
+                                source: card.surface ? card.surface.currentImagePath : ""
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true
+                                visible: status === Image.Ready
+                            }
                         }
 
                         Label {
