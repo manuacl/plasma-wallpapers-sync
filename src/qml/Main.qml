@@ -90,7 +90,7 @@ Kirigami.ApplicationWindow {
             Kirigami.Action {
                 text: qsTr("Choose wallpaper…")
                 icon.name: "preferences-desktop-wallpaper"
-                onTriggered: wallpaperPicker.open()
+                onTriggered: wallpaperPicker.show()
             },
             Kirigami.Action {
                 text: qsTr("Apply")

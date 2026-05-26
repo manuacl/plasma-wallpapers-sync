@@ -5,77 +5,106 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import QtQuick.Window
 import org.kde.kirigami as Kirigami
 
-Kirigami.Dialog {
-    id: pickerDialog
+// Plain QtQuick.Window rather than Kirigami.Dialog so the user can
+// resize the picker freely. Kirigami.Dialog is fixed-size by design
+// (intended for short-form prompts); a long-form grid like this one
+// outgrows that shape as soon as the wallpaper library is non-trivial.
+// transientParent + WindowModal keeps the picker tied to the main
+// application window — focus returns there on close, and the WM
+// treats the picker as a modal of the parent rather than a peer.
+Window {
+    id: pickerWindow
 
     title: qsTr("Choose a wallpaper")
-    width: Math.min(applicationWindow().width * 0.9, Kirigami.Units.gridUnit * 50)
-    height: Math.min(applicationWindow().height * 0.9, Kirigami.Units.gridUnit * 36)
+    width: Kirigami.Units.gridUnit * 48
+    height: Kirigami.Units.gridUnit * 32
+    minimumWidth: Kirigami.Units.gridUnit * 24
+    minimumHeight: Kirigami.Units.gridUnit * 16
+
+    modality: Qt.WindowModal
+    transientParent: applicationWindow()
+    color: Kirigami.Theme.backgroundColor
 
     signal wallpaperPicked(url path)
 
-    standardButtons: Kirigami.Dialog.Cancel
-
-    customFooterActions: [
-        Kirigami.Action {
-            text: qsTr("Browse…")
-            icon.name: "document-open"
-            onTriggered: customFilePicker.open()
-        }
-    ]
-
-    GridView {
-        id: grid
+    ColumnLayout {
         anchors.fill: parent
-        clip: true
-        cellWidth: Kirigami.Units.gridUnit * 10
-        cellHeight: Kirigami.Units.gridUnit * 7
+        anchors.margins: Kirigami.Units.smallSpacing
+        spacing: Kirigami.Units.smallSpacing
 
-        model: wallpaperLibrary
-
-        delegate: ItemDelegate {
-            id: tile
-            width: GridView.view.cellWidth - Kirigami.Units.smallSpacing
-            height: GridView.view.cellHeight - Kirigami.Units.smallSpacing
+        GridView {
+            id: grid
+            Layout.fillWidth: true
+            Layout.fillHeight: true
             clip: true
+            cellWidth: Kirigami.Units.gridUnit * 10
+            cellHeight: Kirigami.Units.gridUnit * 7
 
-            required property string name
-            required property url previewPath
-            required property url applyPath
+            model: wallpaperLibrary
 
-            onClicked: {
-                pickerDialog.wallpaperPicked(tile.applyPath);
-                pickerDialog.close();
-            }
+            delegate: ItemDelegate {
+                id: tile
+                width: GridView.view.cellWidth - Kirigami.Units.smallSpacing
+                height: GridView.view.cellHeight - Kirigami.Units.smallSpacing
+                clip: true
 
-            contentItem: ColumnLayout {
-                spacing: Kirigami.Units.smallSpacing
+                required property string name
+                required property url previewPath
+                required property url applyPath
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    color: Kirigami.Theme.alternateBackgroundColor
-                    radius: Kirigami.Units.smallSpacing
-                    clip: true
+                onClicked: {
+                    pickerWindow.wallpaperPicked(tile.applyPath);
+                    pickerWindow.close();
+                }
 
-                    Image {
-                        anchors.fill: parent
-                        sourceSize.width: 320
-                        source: tile.previewPath
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
+                contentItem: ColumnLayout {
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: Kirigami.Theme.alternateBackgroundColor
+                        radius: Kirigami.Units.smallSpacing
+                        clip: true
+
+                        Image {
+                            anchors.fill: parent
+                            sourceSize.width: 320
+                            source: tile.previewPath
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+                    }
+
+                    Label {
+                        Layout.fillWidth: true
+                        text: tile.name
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                     }
                 }
+            }
+        }
 
-                Label {
-                    Layout.fillWidth: true
-                    text: tile.name
-                    elide: Text.ElideRight
-                    horizontalAlignment: Text.AlignHCenter
-                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                }
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: Kirigami.Units.smallSpacing
+
+            Item { Layout.fillWidth: true }
+
+            Button {
+                text: qsTr("Browse…")
+                icon.name: "document-open"
+                onClicked: customFilePicker.open()
+            }
+            Button {
+                text: qsTr("Cancel")
+                icon.name: "dialog-cancel"
+                onClicked: pickerWindow.close()
             }
         }
     }
@@ -88,8 +117,8 @@ Kirigami.Dialog {
         // not /run/user/.../doc/<token>/ URLs that Plasma can't read.
         options: FileDialog.DontUseNativeDialog
         onAccepted: {
-            pickerDialog.wallpaperPicked(selectedFile);
-            pickerDialog.close();
+            pickerWindow.wallpaperPicked(selectedFile);
+            pickerWindow.close();
         }
     }
 }
