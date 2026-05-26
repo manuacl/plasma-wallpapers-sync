@@ -209,7 +209,12 @@ Kirigami.ApplicationWindow {
                                 id: preview
                                 anchors.fill: parent
                                 sourceSize.width: 480
-                                source: card.surface ? card.surface.currentImagePath : ""
+                                // previewImagePath equals currentImagePath
+                                // for every surface except login, which
+                                // returns a $USER-readable source URL when
+                                // available (/var/lib/plasmalogin/wallpapers/
+                                // is opaque from outside the plasmalogin user).
+                                source: card.surface ? card.surface.previewImagePath : ""
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
                                 visible: status === Image.Ready

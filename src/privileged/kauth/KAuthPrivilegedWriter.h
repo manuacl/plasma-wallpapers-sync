@@ -33,6 +33,7 @@ public:
 
 public Q_SLOTS:
     void writeAtomically(const QString &path, const QByteArray &contents) override;
+    void installFile(const QString &srcPath, const QString &destPath) override;
 };
 
 #endif // PWS_PRIVILEGED_KAUTH_KAUTH_PRIVILEGED_WRITER_H
