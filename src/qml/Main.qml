@@ -46,23 +46,39 @@ Kirigami.ApplicationWindow {
         onAccepted: window.pickedImage = selectedFile
     }
 
+    // Buffer per-surface failure reasons emitted during a batch so
+    // applyFinished can surface them alongside the failed-ids list.
+    property var failureReasons: ({})
+
     Connections {
         target: syncEngine
+        function onSurfaceApplyFailed(id, reason) {
+            const next = Object.assign({}, window.failureReasons);
+            next[id] = reason;
+            window.failureReasons = next;
+        }
         function onApplyFinished(succeeded, failed) {
+            const reasons = window.failureReasons;
+            window.failureReasons = ({});
+
             if (succeeded.length === 0 && failed.length === 0) {
-                return; // empty batch — nothing user-visible to report
+                return;
             }
             if (failed.length === 0) {
                 feedback.type = Kirigami.MessageType.Positive;
                 feedback.text = qsTr("Applied to: %1").arg(succeeded.join(", "));
-            } else if (succeeded.length === 0) {
-                feedback.type = Kirigami.MessageType.Error;
-                feedback.text = qsTr("Failed: %1").arg(failed.join(", "));
             } else {
-                feedback.type = Kirigami.MessageType.Warning;
-                feedback.text = qsTr("Applied to %1, failed on %2")
-                    .arg(succeeded.join(", "))
-                    .arg(failed.join(", "));
+                const detailed = failed.map(id =>
+                    reasons[id] ? `${id} (${reasons[id]})` : id).join(", ");
+                if (succeeded.length === 0) {
+                    feedback.type = Kirigami.MessageType.Error;
+                    feedback.text = qsTr("Failed: %1").arg(detailed);
+                } else {
+                    feedback.type = Kirigami.MessageType.Warning;
+                    feedback.text = qsTr("Applied to %1; failed on %2")
+                        .arg(succeeded.join(", "))
+                        .arg(detailed);
+                }
             }
             feedback.visible = true;
         }
