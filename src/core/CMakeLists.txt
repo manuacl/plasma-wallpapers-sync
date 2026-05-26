@@ -8,6 +8,7 @@ add_library(pws_core STATIC
     LoginSurface.cpp
     PrivilegedWriter.cpp
     SyncEngine.cpp
+    WallpaperLibrary.cpp
 )
 
 target_link_libraries(pws_core

@@ -3,7 +3,6 @@
 
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
@@ -39,16 +38,11 @@ Kirigami.ApplicationWindow {
                                      && selectedIds().length > 0
                                      && !syncEngine.applying
 
-    FileDialog {
-        id: filePicker
-        title: qsTr("Pick a wallpaper image")
-        nameFilters: [qsTr("Images (*.jpg *.jpeg *.png *.webp *.bmp)")]
-        // Belt-and-suspenders with main.cpp's
-        // Qt::AA_DontUseNativeDialogs — keeps FileDialog away from
-        // the XDG FileChooser portal even if some Qt version stops
-        // honoring the global attribute on QtQuick.Dialogs.
-        options: FileDialog.DontUseNativeDialog
-        onAccepted: window.pickedImage = selectedFile
+    WallpaperPicker {
+        id: wallpaperPicker
+        onWallpaperPicked: (path) => {
+            window.pickedImage = path;
+        }
     }
 
     // Buffer per-surface failure reasons emitted during a batch so
@@ -94,9 +88,9 @@ Kirigami.ApplicationWindow {
 
         actions: [
             Kirigami.Action {
-                text: qsTr("Pick image…")
-                icon.name: "document-open"
-                onTriggered: filePicker.open()
+                text: qsTr("Choose wallpaper…")
+                icon.name: "preferences-desktop-wallpaper"
+                onTriggered: wallpaperPicker.open()
             },
             Kirigami.Action {
                 text: qsTr("Apply")
