@@ -54,11 +54,11 @@ find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
 #
 add_subdirectory(src/core)
 add_subdirectory(src/reload)
+add_subdirectory(src/qml)
+add_subdirectory(src/shell/standalone)
+add_subdirectory(data)
 # add_subdirectory(src/privileged/kauth)
 # add_subdirectory(src/helper)
-# add_subdirectory(src/shell/standalone)
-# add_subdirectory(src/qml)
-# add_subdirectory(data)
 # add_subdirectory(po)
 
 enable_testing()

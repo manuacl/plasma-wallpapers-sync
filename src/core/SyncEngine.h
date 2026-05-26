@@ -35,13 +35,14 @@ class WallpaperSurface;
 class SyncEngine : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QStringList surfaceIds READ surfaceIds NOTIFY surfacesChanged)
 public:
     explicit SyncEngine(QObject *parent = nullptr);
     ~SyncEngine() override;
 
     void addSurface(WallpaperSurface *surface);
     QStringList surfaceIds() const;
-    WallpaperSurface *surface(const QString &id) const;
+    Q_INVOKABLE WallpaperSurface *surface(const QString &id) const;
     bool isApplying() const;
 
 public Q_SLOTS:
@@ -49,6 +50,7 @@ public Q_SLOTS:
     void applyToAll(const QString &imagePath);
 
 Q_SIGNALS:
+    void surfacesChanged();
     void surfaceApplySucceeded(const QString &id);
     void surfaceApplyFailed(const QString &id, const QString &reason);
     void applyFinished(const QStringList &succeeded, const QStringList &failed);

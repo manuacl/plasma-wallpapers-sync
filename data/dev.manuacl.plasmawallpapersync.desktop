@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Plasma Wallpaper Sync
+GenericName=Wallpaper Synchronizer
+Comment=View and sync Plasma 6 wallpapers across desktop, lock screen and login
+Exec=plasma-wallpaper-sync
+Icon=preferences-desktop-wallpaper
+Categories=Settings;DesktopSettings;Qt;KDE;
+Keywords=wallpaper;background;desktop;lock;login;synchronize;
+StartupNotify=true
+StartupWMClass=plasma-wallpaper-sync

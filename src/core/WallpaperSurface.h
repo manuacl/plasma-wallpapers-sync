@@ -21,6 +21,9 @@
 class WallpaperSurface : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(QString id READ id CONSTANT)
+    Q_PROPERTY(QString displayName READ displayName CONSTANT)
+    Q_PROPERTY(QString currentImagePath READ currentImagePath NOTIFY currentImagePathChanged)
 public:
     explicit WallpaperSurface(QObject *parent = nullptr);
     ~WallpaperSurface() override;
