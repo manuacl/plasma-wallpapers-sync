@@ -27,6 +27,7 @@ void SyncEngine::addSurface(WallpaperSurface *s)
     }
     m_surfaces.insert(id, s);
     m_order.append(id);
+    Q_EMIT surfacesChanged();
 
     connect(s, &WallpaperSurface::applySucceeded, this, [this, id]() {
         Q_EMIT surfaceApplySucceeded(id);

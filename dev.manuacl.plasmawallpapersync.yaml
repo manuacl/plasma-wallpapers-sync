@@ -44,9 +44,6 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=Debug
     builddir: true
-    # Re-enable once the standalone shell module adds install() rules
-    # for the binary, .desktop entry and polkit policy.
-    no-make-install: true
     run-tests: true
     test-commands:
       - ctest --output-on-failure --verbose
