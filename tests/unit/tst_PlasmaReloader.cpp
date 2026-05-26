@@ -40,7 +40,7 @@ void TestPlasmaReloader::desktopWithoutPlasmaShellEmitsFailure()
     PlasmaReloader r(QStringLiteral("org.kde.plasmashell.tst-pwsync-nonexistent"));
     QSignalSpy failed(&r, &PlasmaReloader::notificationFailed);
 
-    r.notifyDesktopChanged();
+    r.notifyDesktopChanged(QStringLiteral("file:///tmp/whatever.png"));
 
     QCOMPARE(failed.count(), 1);
     QCOMPARE(failed.first().at(0).toString(), QStringLiteral("desktop"));

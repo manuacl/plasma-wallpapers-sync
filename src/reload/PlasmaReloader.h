@@ -46,7 +46,12 @@ public:
     ~PlasmaReloader() override;
 
 public Q_SLOTS:
-    void notifyDesktopChanged();
+    /** Replays the new image path through Plasma's containment
+     *  scripting so the wallpaper plugin picks it up live. Plasma's
+     *  writeConfig() — not our prior KConfig write to disk — is what
+     *  drives the plugin's repaint signal, hence the path-on-call. */
+    void notifyDesktopChanged(const QString &imagePath);
+
     void notifyLockscreenChanged();
     void notifyLoginChanged();
 
