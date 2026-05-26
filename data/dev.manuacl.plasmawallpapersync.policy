@@ -16,7 +16,22 @@ SPDX-License-Identifier: GPL-2.0-or-later
         <defaults>
             <allow_any>no</allow_any>
             <allow_inactive>no</allow_inactive>
-            <allow_active>auth_admin</allow_active>
+            <allow_active>auth_admin_keep</allow_active>
         </defaults>
+    </action>
+
+    <action id="dev.manuacl.plasmawallpapersync.installwallpaper">
+        <description>Stage a wallpaper for the login screen</description>
+        <message>Authentication is required to change the login screen wallpaper</message>
+        <defaults>
+            <allow_any>no</allow_any>
+            <allow_inactive>no</allow_inactive>
+            <allow_active>auth_admin_keep</allow_active>
+        </defaults>
+        <!-- LoginSurface always runs installwallpaper first, then
+             writefile. Implying writefile here collapses the two
+             polkit prompts into one: authorizing the install grants
+             the conf-write that immediately follows. -->
+        <annotate key="org.freedesktop.policykit.imply">dev.manuacl.plasmawallpapersync.writefile</annotate>
     </action>
 </policyconfig>

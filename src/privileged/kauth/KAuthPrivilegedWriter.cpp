@@ -11,7 +11,8 @@
 namespace
 {
 const QString kHelperId = QStringLiteral("dev.manuacl.plasmawallpapersync");
-const QString kActionName = QStringLiteral("dev.manuacl.plasmawallpapersync.writefile");
+const QString kWriteActionName = QStringLiteral("dev.manuacl.plasmawallpapersync.writefile");
+const QString kInstallActionName = QStringLiteral("dev.manuacl.plasmawallpapersync.installwallpaper");
 }
 
 KAuthPrivilegedWriter::KAuthPrivilegedWriter(QObject *parent)
@@ -23,7 +24,7 @@ KAuthPrivilegedWriter::~KAuthPrivilegedWriter() = default;
 
 void KAuthPrivilegedWriter::writeAtomically(const QString &path, const QByteArray &contents)
 {
-    KAuth::Action action(kActionName);
+    KAuth::Action action(kWriteActionName);
     action.setHelperId(kHelperId);
 
     QVariantMap args;
@@ -44,6 +45,34 @@ void KAuthPrivilegedWriter::writeAtomically(const QString &path, const QByteArra
             Q_EMIT writeFailed(path, job->errorString());
         } else {
             Q_EMIT writeSucceeded(path);
+        }
+        job->deleteLater();
+    });
+
+    job->start();
+}
+
+void KAuthPrivilegedWriter::installFile(const QString &srcPath, const QString &destPath)
+{
+    KAuth::Action action(kInstallActionName);
+    action.setHelperId(kHelperId);
+
+    QVariantMap args;
+    args[QStringLiteral("src")] = srcPath;
+    args[QStringLiteral("dest")] = destPath;
+    action.setArguments(args);
+
+    KAuth::ExecuteJob *job = action.execute();
+    if (!job) {
+        Q_EMIT installFailed(destPath, tr("Could not start the privileged install action"));
+        return;
+    }
+
+    connect(job, &KAuth::ExecuteJob::result, this, [this, destPath, job]() {
+        if (job->error()) {
+            Q_EMIT installFailed(destPath, job->errorString());
+        } else {
+            Q_EMIT installSucceeded(destPath);
         }
         job->deleteLater();
     });

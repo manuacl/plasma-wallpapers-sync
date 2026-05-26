@@ -43,6 +43,28 @@ public Q_SLOTS:
      * HelperErrorReply with an errorDescription otherwise.
      */
     KAuth::ActionReply writefile(const QVariantMap &args);
+
+    /**
+     * Action method exposed to KAuth::Action as
+     * "dev.manuacl.plasmawallpapersync.installwallpaper".
+     *
+     * Copies a user-readable image into /var/lib/plasmalogin/wallpapers/
+     * so the plasmalogin system user can read it from the greeter.
+     * The greeter cannot reach $HOME directly (mode drwx------), so a
+     * conf pointing at file:///home/.../foo.jpg silently falls back to
+     * the previous (or default) wallpaper.
+     *
+     * Arguments (QVariantMap):
+     *   - "src": QString — absolute path the helper (as root) reads from.
+     *     Symlinks are followed; size capped to refuse pathological inputs.
+     *   - "dest": QString — must be /var/lib/plasmalogin/wallpapers/<basename>
+     *     with basename containing no path separators or "..". Defense in
+     *     depth on top of the polkit gate.
+     *
+     * On success the destination is chowned plasmalogin:plasmalogin
+     * and chmodded 0644. Existing file at dest is replaced atomically.
+     */
+    KAuth::ActionReply installwallpaper(const QVariantMap &args);
 };
 
 #endif // PWS_HELPER_PLASMA_LOGIN_HELPER_H

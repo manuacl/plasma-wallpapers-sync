@@ -20,11 +20,20 @@ class PrivilegedWriter;
  * The on-disk format matches kscreenlockerrc exactly:
  * `[Greeter][Wallpaper][org.kde.image][General] Image=...`.
  *
- * Apply strategy: stage a user-writable copy of the file, mutate it
- * with KConfig in unprivileged space, then hand the resulting bytes
- * to the writer. This keeps the privileged process minimal — it only
- * needs to know how to atomically replace a file, not how to parse
- * KConfig.
+ * Apply strategy: a two-step pipeline through the PrivilegedWriter.
+ *
+ *   1. installFile() copies the user-chosen image into
+ *      /var/lib/plasmalogin/wallpapers/<basename>. The greeter runs
+ *      as the `plasmalogin` system user, which has no access to $HOME
+ *      (mode drwx------); pointing the conf at /home/.../foo.jpg
+ *      directly causes a silent fallback to the previous wallpaper.
+ *   2. writeAtomically() replaces /etc/plasmalogin.conf with a
+ *      version whose Image= key points at the just-installed copy.
+ *
+ * Step 2 only runs if step 1 succeeded. Both steps are gated by polkit
+ * (auth_admin), so the user may see two prompts the first time per
+ * session. The KConfig mutation that produces step 2's bytes happens
+ * in unprivileged user space — the helper never parses KConfig.
  */
 class LoginSurface : public WallpaperSurface
 {
@@ -55,18 +64,33 @@ public:
     QString id() const override;
     QString displayName() const override;
     QString currentImagePath() const override;
+    QString previewImagePath() const override;
+
+    /** Tests inject a fake cache location to keep $XDG_CACHE_HOME
+     *  untouched. Empty string ⇒ use QStandardPaths::CacheLocation. */
+    void setPreviewSourceCachePath(const QString &path);
 
 public Q_SLOTS:
     void apply(const QString &imagePath) override;
 
 private:
     void wireWriterSignals();
+    void writeConfWithImage(const QString &installedImageUrl);
+    void persistPreviewSourceMapping(const QString &installedDest,
+                                     const QString &sourceUrl);
+    QString readCachedSourceUrlFor(const QString &installedDest) const;
+    QString previewSourceCachePath() const;
     static QString defaultReadPath();
     static QString defaultWritePath();
+    static QString sanitizeBasename(const QString &candidate);
+    static QString resolveLocalPath(const QString &maybeUrl);
 
     PrivilegedWriter *m_writer; // not owned
     QString m_readPath;
     QString m_writePath;
+    QString m_pendingInstallDest;
+    QString m_pendingSourceUrl;
+    QString m_overrideCachePath;
 };
 
 #endif // PWS_CORE_LOGIN_SURFACE_H

@@ -24,6 +24,7 @@ class WallpaperSurface : public QObject
     Q_PROPERTY(QString id READ id CONSTANT)
     Q_PROPERTY(QString displayName READ displayName CONSTANT)
     Q_PROPERTY(QString currentImagePath READ currentImagePath NOTIFY currentImagePathChanged)
+    Q_PROPERTY(QString previewImagePath READ previewImagePath NOTIFY currentImagePathChanged)
 public:
     explicit WallpaperSurface(QObject *parent = nullptr);
     ~WallpaperSurface() override;
@@ -34,8 +35,19 @@ public:
     /** Translated, human-facing label shown in the GUI card. */
     virtual QString displayName() const = 0;
 
-    /** Current image path or URL as recorded by the live system. */
+    /** Current image path or URL as recorded by the live system —
+     *  the canonical truth for the consumer of the surface (Plasma
+     *  shell, kscreenlocker, plasmalogin, …). */
     virtual QString currentImagePath() const = 0;
+
+    /** Image URL the GUI should use for the on-card preview.
+     *  Defaults to currentImagePath() — only LoginSurface overrides,
+     *  because /var/lib/plasmalogin/wallpapers/ is not readable from
+     *  the invoking user even though the conf path stored there is
+     *  what plasmalogin actually consumes. The override returns the
+     *  user-side source URL that produced the install, falling back
+     *  to currentImagePath() when no source mapping is on record. */
+    virtual QString previewImagePath() const { return currentImagePath(); }
 
 public Q_SLOTS:
     /** Write the new image. Always emits exactly one of the two
