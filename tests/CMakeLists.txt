@@ -20,7 +20,20 @@ function(pws_add_core_test name)
     add_test(NAME ${name} COMMAND ${name})
 endfunction()
 
+function(pws_add_reload_test name)
+    add_executable(${name} unit/${name}.cpp ${ARGN})
+    target_link_libraries(${name}
+        PRIVATE
+            pws_reload
+            Qt6::Core
+            Qt6::Test
+            Qt6::DBus
+    )
+    add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
 pws_add_core_test(tst_DesktopSurface)
 pws_add_core_test(tst_LockscreenSurface)
 pws_add_core_test(tst_LoginSurface unit/FakePrivilegedWriter.h)
 pws_add_core_test(tst_SyncEngine unit/FakeSurface.h)
+pws_add_reload_test(tst_PlasmaReloader)
