@@ -5,8 +5,10 @@
 #include "KAuthPrivilegedWriter.h"
 #include "LockscreenSurface.h"
 #include "LoginSurface.h"
+#include "PlasmaReloader.h"
 #include "SyncEngine.h"
 #include "WallpaperLibrary.h"
+#include "WallpaperSurface.h"
 
 #include <QGuiApplication>
 #include <QIcon>
@@ -41,6 +43,25 @@ int main(int argc, char **argv)
     engine.addSurface(&desktop);
     engine.addSurface(&lockscreen);
     engine.addSurface(&login);
+
+    // Plasma doesn't re-render the desktop wallpaper from disk on
+    // its own when we rewrite the appletsrc — KConfigWatcher catches
+    // the file change but the wallpaper plugin doesn't act on it.
+    // Poke org.kde.PlasmaShell via D-Bus on every successful apply.
+    // Lockscreen and login are notify no-ops by design (kscreenlocker
+    // re-reads on the next lock event; plasmalogin only runs at boot).
+    PlasmaReloader reloader;
+    QObject::connect(&engine, &SyncEngine::surfaceApplySucceeded,
+                     &reloader, [&reloader, &engine](const QString &id) {
+        WallpaperSurface *s = engine.surface(id);
+        if (id == QStringLiteral("desktop")) {
+            reloader.notifyDesktopChanged(s ? s->currentImagePath() : QString());
+        } else if (id == QStringLiteral("lockscreen")) {
+            reloader.notifyLockscreenChanged();
+        } else if (id == QStringLiteral("login")) {
+            reloader.notifyLoginChanged();
+        }
+    });
 
     WallpaperLibrary wallpapers;
 

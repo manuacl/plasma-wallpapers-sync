@@ -14,12 +14,38 @@ const QString kPlasmaShellPath = QStringLiteral("/PlasmaShell");
 const QString kPlasmaShellIface = QStringLiteral("org.kde.PlasmaShell");
 const QString kDesktopSurface = QStringLiteral("desktop");
 
-// "Re-set the same wallpaperPlugin" is a load-bearing no-op assignment:
-// Plasma's containment scripting treats the setter as a config change
-// trigger and re-reads the underlying plugin group from disk, picking
-// up whatever DesktopSurface just wrote.
-const QString kDesktopReloadScript = QStringLiteral(
-    "desktops().forEach(function(d) { d.wallpaperPlugin = d.wallpaperPlugin; });");
+// Canonical Plasma 6 wallpaper-set script. Three earlier variants
+// silently no-op'd against the live plugin:
+//   - `d.wallpaperPlugin = d.wallpaperPlugin` — same-value setter is
+//     short-circuited by Plasma
+//   - `d.reloadConfig()` — recognized but the wallpaper plugin
+//     doesn't react to it (it caches its config in memory and only
+//     re-reads it when explicitly poked through writeConfig)
+//   - `wallpaperPlugin = 'org.kde.color'; wallpaperPlugin = 'org.kde.image'`
+//     — both setters happen in the same script evaluation, Plasma
+//     batches them into a "net zero change" and skips the reload
+//
+// The only reliable reload trigger is the same call System Settings
+// makes when the user clicks Apply in its Wallpaper page: write the
+// Image value through Plasma's containment scripting. That goes
+// through the wallpaper plugin's setter path, which emits the
+// repaint signal that the renderer actually listens for. The fact
+// that we also wrote the same value to disk via KConfig moments
+// earlier is what keeps the file authoritative across restarts;
+// this call is the live-update bridge.
+const QString kDesktopReloadScriptTemplate = QStringLiteral(
+    "desktops().forEach(function(d) { "
+    "d.currentConfigGroup = ['Wallpaper', 'org.kde.image', 'General']; "
+    "d.writeConfig('Image', '%1'); "
+    "});");
+
+QString escapeForSingleQuotedJsString(const QString &s)
+{
+    QString out = s;
+    out.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    out.replace(QLatin1Char('\''), QStringLiteral("\\'"));
+    return out;
+}
 }
 
 PlasmaReloader::PlasmaReloader(QObject *parent)
@@ -35,7 +61,7 @@ PlasmaReloader::PlasmaReloader(const QString &plasmashellService, QObject *paren
 
 PlasmaReloader::~PlasmaReloader() = default;
 
-void PlasmaReloader::notifyDesktopChanged()
+void PlasmaReloader::notifyDesktopChanged(const QString &imagePath)
 {
     QDBusConnection bus = QDBusConnection::sessionBus();
     if (!bus.isConnected()) {
@@ -49,7 +75,9 @@ void PlasmaReloader::notifyDesktopChanged()
         return;
     }
 
-    QDBusReply<void> reply = iface.call(QStringLiteral("evaluateScript"), kDesktopReloadScript);
+    const QString script = kDesktopReloadScriptTemplate.arg(
+        escapeForSingleQuotedJsString(imagePath));
+    QDBusReply<QString> reply = iface.call(QStringLiteral("evaluateScript"), script);
     if (!reply.isValid()) {
         Q_EMIT notificationFailed(kDesktopSurface, reply.error().message());
     }
