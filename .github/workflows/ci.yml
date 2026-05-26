@@ -23,7 +23,7 @@ jobs:
     name: REUSE compliance
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: fsfe/reuse-action@v5
 
   build-and-test:
@@ -49,7 +49,7 @@ jobs:
             kf6-kirigami-devel \
             kf6-kauth-devel
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure
         run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug
