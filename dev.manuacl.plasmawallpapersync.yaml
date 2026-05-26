@@ -29,6 +29,13 @@ finish-args:
   - --filesystem=home:ro
   - --talk-name=org.kde.plasmashell
   - --talk-name=org.kde.screensaver
+  # Without this Qt sees XDG_CONFIG_HOME=/home/user/.var/app/<id>/config
+  # (the sandbox-private dir) and QStandardPaths::ConfigLocation lands
+  # there instead of ~/.config, so reads/writes of plasma-org.kde.plasma
+  # .desktop-appletsrc, kscreenlockerrc, ksplashrc miss the host files
+  # entirely. Unsetting it makes Qt fall back to ~/.config which the
+  # filesystem=xdg-config mount above resolves to the host's real dir.
+  - --unset-env=XDG_CONFIG_HOME
 
 cleanup:
   - /include
