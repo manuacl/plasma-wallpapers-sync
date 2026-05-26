@@ -5,7 +5,7 @@
 
 #include <KConfig>
 #include <KConfigGroup>
-#include <QStandardPaths>
+#include <QDir>
 #include <QUrl>
 
 namespace
@@ -42,8 +42,16 @@ QString DesktopSurface::displayName() const
 
 QString DesktopSurface::defaultConfigPath()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::ConfigLocation)
-        + QStringLiteral("/plasma-org.kde.plasma.desktop-appletsrc");
+    // Hard-target $HOME/.config rather than $XDG_CONFIG_HOME via
+    // QStandardPaths::ConfigLocation: the file we want is the
+    // user-wide Plasma config that the live session reads, which by
+    // convention lives in ~/.config/ regardless of XDG_CONFIG_HOME's
+    // value. Inside the Flatpak sandbox the runtime forces
+    // XDG_CONFIG_HOME to the per-app private dir even with
+    // --unset-env in finish-args, so the only reliable read/write
+    // path to the host's plasma config is $HOME/.config (bind-mounted
+    // via --filesystem=xdg-config).
+    return QDir::homePath() + QStringLiteral("/.config/plasma-org.kde.plasma.desktop-appletsrc");
 }
 
 QString DesktopSurface::findPrimaryContainmentId() const
