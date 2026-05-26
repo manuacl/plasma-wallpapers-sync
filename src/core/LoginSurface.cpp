@@ -67,6 +67,11 @@ QString LoginSurface::displayName() const
     return tr("Login screen");
 }
 
+QString LoginSurface::description() const
+{
+    return tr("Shown by plasmalogin before any user logs in, behind the user list and password prompt.");
+}
+
 QString LoginSurface::defaultReadPath()
 {
     // Native install: /etc/plasmalogin.conf is the host's file.

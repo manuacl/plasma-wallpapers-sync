@@ -40,6 +40,11 @@ QString DesktopSurface::displayName() const
     return tr("Desktop");
 }
 
+QString DesktopSurface::description() const
+{
+    return tr("Shown on the active Plasma desktop, behind windows and the panel.");
+}
+
 QString DesktopSurface::defaultConfigPath()
 {
     // Hard-target $HOME/.config rather than $XDG_CONFIG_HOME via
