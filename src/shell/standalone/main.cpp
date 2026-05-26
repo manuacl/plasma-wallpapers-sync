@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "DesktopSurface.h"
+#include "KAuthPrivilegedWriter.h"
 #include "LockscreenSurface.h"
+#include "LoginSurface.h"
 #include "SyncEngine.h"
 #include "WallpaperLibrary.h"
 
@@ -31,15 +33,14 @@ int main(int argc, char **argv)
         QGuiApplication::translate("Main", "Plasma Wallpaper Sync"));
     QIcon::setFallbackThemeName(QStringLiteral("breeze"));
 
-    // LoginSurface is held back until the KAuth helper lands — the
-    // shell would have to inject a PrivilegedWriter, and we don't
-    // want to ship the GUI half-wired. Desktop + Lockscreen are
-    // fully functional today.
     SyncEngine engine;
     DesktopSurface desktop;
     LockscreenSurface lockscreen;
+    KAuthPrivilegedWriter privilegedWriter;
+    LoginSurface login(&privilegedWriter);
     engine.addSurface(&desktop);
     engine.addSurface(&lockscreen);
+    engine.addSurface(&login);
 
     WallpaperLibrary wallpapers;
 
