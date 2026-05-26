@@ -83,7 +83,14 @@ void WallpaperLibrary::reload()
 QStringList WallpaperLibrary::defaultSearchPaths()
 {
     return {
+        // Native install: where Plasma ships its bundled wallpapers.
         QStringLiteral("/usr/share/wallpapers"),
+        // Flatpak install: /usr is reserved by Flatpak, host's
+        // /usr/share/wallpapers is reachable through /run/host/ under
+        // --filesystem=host:ro. Non-existent on a native install,
+        // skipped silently by scanDir().
+        QStringLiteral("/run/host/usr/share/wallpapers"),
+        // User-installed packages and quick-drop folders.
         QDir::homePath() + QStringLiteral("/.local/share/wallpapers"),
     };
 }

@@ -56,6 +56,12 @@ QString DesktopSurface::defaultConfigPath()
 
 QString DesktopSurface::findPrimaryContainmentId() const
 {
+    const QStringList ids = findAllDesktopContainmentIds();
+    return ids.isEmpty() ? QString() : ids.first();
+}
+
+QStringList DesktopSurface::findAllDesktopContainmentIds() const
+{
     // Detect by structure rather than by the containment's `plugin` value:
     // Plasma 5 used `org.kde.desktopcontainment`, Plasma 6 uses
     // `org.kde.plasma.folder`, and the panel containment carries a
@@ -66,16 +72,17 @@ QString DesktopSurface::findPrimaryContainmentId() const
     KConfig config(m_configPath, KConfig::SimpleConfig);
     const KConfigGroup containments = config.group(kContainments);
     const QStringList ids = containments.groupList();
+    QStringList result;
     for (const QString &id : ids) {
         const KConfigGroup imageGroup = containments.group(id)
                                             .group(kWallpaper)
                                             .group(kImagePlugin)
                                             .group(kGeneral);
         if (imageGroup.hasKey(kImageKey)) {
-            return id;
+            result.append(id);
         }
     }
-    return {};
+    return result;
 }
 
 QString DesktopSurface::currentImagePath() const
@@ -95,8 +102,8 @@ QString DesktopSurface::currentImagePath() const
 
 void DesktopSurface::apply(const QString &imagePath)
 {
-    const QString containmentId = findPrimaryContainmentId();
-    if (containmentId.isEmpty()) {
+    const QStringList containmentIds = findAllDesktopContainmentIds();
+    if (containmentIds.isEmpty()) {
         Q_EMIT applyFailed(tr("No desktop containment found in %1").arg(m_configPath));
         return;
     }
@@ -108,13 +115,18 @@ void DesktopSurface::apply(const QString &imagePath)
         normalized = QUrl::fromLocalFile(imagePath).toString();
     }
 
+    // Sync the wallpaper across every desktop containment (= every
+    // screen). Per-screen differentiation is explicitly out of scope
+    // for v1 — this is the "sync" in the project's name.
     KConfig config(m_configPath, KConfig::SimpleConfig);
-    KConfigGroup imageGroup = config.group(kContainments)
-                                  .group(containmentId)
-                                  .group(kWallpaper)
-                                  .group(kImagePlugin)
-                                  .group(kGeneral);
-    imageGroup.writeEntry(kImageKey, normalized);
+    for (const QString &containmentId : containmentIds) {
+        KConfigGroup imageGroup = config.group(kContainments)
+                                      .group(containmentId)
+                                      .group(kWallpaper)
+                                      .group(kImagePlugin)
+                                      .group(kGeneral);
+        imageGroup.writeEntry(kImageKey, normalized);
+    }
     if (!config.sync()) {
         Q_EMIT applyFailed(tr("Failed to write %1").arg(m_configPath));
         return;

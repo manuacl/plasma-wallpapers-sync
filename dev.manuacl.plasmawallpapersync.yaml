@@ -27,11 +27,13 @@ finish-args:
   - --filesystem=xdg-config:rw
   - --filesystem=xdg-pictures:ro
   - --filesystem=home:ro
-  # System wallpapers are at /usr/share/wallpapers/ on the host but
-  # org.kde.Platform//6.10 doesn't ship them at the same path inside
-  # the sandbox, so the WallpaperLibrary scan misses them entirely.
-  # This grant pulls them in read-only.
-  - --filesystem=/usr/share/wallpapers:ro
+  # System wallpapers live at /usr/share/wallpapers/ on the host
+  # but Flatpak rejects --filesystem=/usr/share/wallpapers explicitly
+  # ("Path /usr is reserved by Flatpak"). The supported way to read
+  # host /usr is to grant host:ro and read through /run/host/.
+  # WallpaperLibrary's default search paths include
+  # /run/host/usr/share/wallpapers, which only exists with this grant.
+  - --filesystem=host:ro
   - --talk-name=org.kde.plasmashell
   - --talk-name=org.kde.screensaver
 

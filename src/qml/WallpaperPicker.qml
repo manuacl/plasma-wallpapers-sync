@@ -39,6 +39,7 @@ Kirigami.Dialog {
             id: tile
             width: GridView.view.cellWidth - Kirigami.Units.smallSpacing
             height: GridView.view.cellHeight - Kirigami.Units.smallSpacing
+            clip: true
 
             required property string name
             required property url previewPath

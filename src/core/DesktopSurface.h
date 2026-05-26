@@ -6,6 +6,8 @@
 
 #include "WallpaperSurface.h"
 
+#include <QStringList>
+
 /**
  * Desktop wallpaper surface.
  *
@@ -35,6 +37,7 @@ public Q_SLOTS:
 
 private:
     QString findPrimaryContainmentId() const;
+    QStringList findAllDesktopContainmentIds() const;
     static QString defaultConfigPath();
 
     QString m_configPath;

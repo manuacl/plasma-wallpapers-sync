@@ -21,6 +21,7 @@ private Q_SLOTS:
     void readsCurrentImageFromFixture();
     void emptyImageWhenNoMatchingContainment();
     void skipsPanelContainmentEvenWithWallpaperplugin();
+    void applyWritesToEveryDesktopContainment();
     void applyWritesImageBackAsFileUrl();
     void applyKeepsExistingFileUrlPrefix();
     void applyFailsWhenNoContainment();
@@ -102,6 +103,36 @@ void TestDesktopSurface::applyKeepsExistingFileUrlPrefix()
     s.apply(QStringLiteral("file:///already/prefixed.png"));
 
     QCOMPARE(s.currentImagePath(), QStringLiteral("file:///already/prefixed.png"));
+    QFile::remove(temp);
+}
+
+void TestDesktopSurface::applyWritesToEveryDesktopContainment()
+{
+    // Multi-screen Plasma setups carry one containment per monitor
+    // under the same activity. Apply must write to every containment
+    // that has a wallpaper subgroup — otherwise the "sync" promise
+    // only covers one screen and the user sees the new wallpaper on
+    // one monitor but the old one on the other.
+    const QString temp = copyFixtureToTemp(QStringLiteral("sample-desktop-appletsrc-multi.ini"));
+    QVERIFY(!temp.isEmpty());
+
+    DesktopSurface s(temp);
+    QSignalSpy success(&s, &WallpaperSurface::applySucceeded);
+    s.apply(QStringLiteral("/home/test/Pictures/synced.png"));
+    QCOMPARE(success.count(), 1);
+
+    // Re-read both containments through a fresh KConfig and assert
+    // both got the new image (currentImagePath only returns the
+    // primary — that's fine, but the apply must have hit both).
+    QFile f(temp);
+    QVERIFY(f.open(QIODevice::ReadOnly));
+    const QByteArray after = f.readAll();
+    f.close();
+    QVERIFY(after.contains("[Containments][2][Wallpaper][org.kde.image][General]"));
+    QVERIFY(after.contains("[Containments][27][Wallpaper][org.kde.image][General]"));
+    const int matches = after.count("file:///home/test/Pictures/synced.png");
+    QCOMPARE(matches, 2);
+
     QFile::remove(temp);
 }
 
