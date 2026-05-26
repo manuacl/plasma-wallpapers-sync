@@ -166,9 +166,11 @@ editing.
   `tests/unit/tst_<Name>.cpp` with QTest. New QML view with public
   surface ⇒ `tests/qml/tst_<Name>.qml`. Fixture-driven tests for the
   `*rc` parsers — keep sample files under `tests/unit/fixtures/`.
+<!-- REUSE-IgnoreStart -->
 - **REUSE / SPDX headers on every source file.** `SPDX-License-Identifier:
-  GPL-2.0-or-later` + `SPDX-FileCopyrightText: <year> Manu <manu.acl@gmail.com>`.
+  GPL-2.0-or-later` + `SPDX-FileCopyrightText: <year> Manuel Chamorro <manu.acl@gmail.com>`.
   Required for KDE Review acceptance.
+<!-- REUSE-IgnoreEnd -->
 - **KDE Frameworks coding style** for C++ (4-space indent, brace on
   next line for functions, `m_` prefix for member variables). Enforced
   by `.clang-format` once scaffolded.
