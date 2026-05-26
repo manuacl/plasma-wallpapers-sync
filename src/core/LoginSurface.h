@@ -63,6 +63,7 @@ public:
 
     QString id() const override;
     QString displayName() const override;
+    QString description() const override;
     QString currentImagePath() const override;
     QString previewImagePath() const override;
 

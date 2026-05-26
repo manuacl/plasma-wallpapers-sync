@@ -38,3 +38,4 @@ ui_*.h
 
 # OS
 .DS_Store
+.claude/scheduled_tasks.lock

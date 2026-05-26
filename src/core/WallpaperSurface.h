@@ -23,6 +23,7 @@ class WallpaperSurface : public QObject
     Q_OBJECT
     Q_PROPERTY(QString id READ id CONSTANT)
     Q_PROPERTY(QString displayName READ displayName CONSTANT)
+    Q_PROPERTY(QString description READ description CONSTANT)
     Q_PROPERTY(QString currentImagePath READ currentImagePath NOTIFY currentImagePathChanged)
     Q_PROPERTY(QString previewImagePath READ previewImagePath NOTIFY currentImagePathChanged)
 public:
@@ -34,6 +35,12 @@ public:
 
     /** Translated, human-facing label shown in the GUI card. */
     virtual QString displayName() const = 0;
+
+    /** Translated one-sentence explanation of which screen this surface
+     *  represents — feeds the contextual-help tooltip on each card so
+     *  users disambiguate "lock screen" vs "login screen" without
+     *  guessing. Defaults to empty for surfaces that omit it. */
+    virtual QString description() const { return {}; }
 
     /** Current image path or URL as recorded by the live system —
      *  the canonical truth for the consumer of the surface (Plasma

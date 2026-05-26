@@ -40,6 +40,11 @@ QString LockscreenSurface::displayName() const
     return tr("Lock screen");
 }
 
+QString LockscreenSurface::description() const
+{
+    return tr("Shown while your session is locked (Meta+L or after idle auto-lock), behind the unlock prompt.");
+}
+
 QString LockscreenSurface::defaultConfigPath()
 {
     // Same rationale as DesktopSurface::defaultConfigPath — go through
