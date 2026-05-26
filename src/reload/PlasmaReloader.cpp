@@ -9,7 +9,7 @@
 
 namespace
 {
-const QString kPlasmaShellService = QStringLiteral("org.kde.plasmashell");
+const QString kDefaultPlasmaShellService = QStringLiteral("org.kde.plasmashell");
 const QString kPlasmaShellPath = QStringLiteral("/PlasmaShell");
 const QString kPlasmaShellIface = QStringLiteral("org.kde.PlasmaShell");
 const QString kDesktopSurface = QStringLiteral("desktop");
@@ -23,7 +23,13 @@ const QString kDesktopReloadScript = QStringLiteral(
 }
 
 PlasmaReloader::PlasmaReloader(QObject *parent)
+    : PlasmaReloader(kDefaultPlasmaShellService, parent)
+{
+}
+
+PlasmaReloader::PlasmaReloader(const QString &plasmashellService, QObject *parent)
     : QObject(parent)
+    , m_plasmashellService(plasmashellService)
 {
 }
 
@@ -37,7 +43,7 @@ void PlasmaReloader::notifyDesktopChanged()
         return;
     }
 
-    QDBusInterface iface(kPlasmaShellService, kPlasmaShellPath, kPlasmaShellIface, bus);
+    QDBusInterface iface(m_plasmashellService, kPlasmaShellPath, kPlasmaShellIface, bus);
     if (!iface.isValid()) {
         Q_EMIT notificationFailed(kDesktopSurface, iface.lastError().message());
         return;

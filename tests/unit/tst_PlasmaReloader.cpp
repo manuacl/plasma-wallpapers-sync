@@ -33,7 +33,11 @@ private Q_SLOTS:
 
 void TestPlasmaReloader::desktopWithoutPlasmaShellEmitsFailure()
 {
-    PlasmaReloader r;
+    // Target a deliberately-fake bus name so the test passes
+    // regardless of whether a real plasmashell happens to be running
+    // on the session bus (it always is in a dev toolbox shared with
+    // the live Plasma session; it never is in CI).
+    PlasmaReloader r(QStringLiteral("org.kde.plasmashell.tst-pwsync-nonexistent"));
     QSignalSpy failed(&r, &PlasmaReloader::notificationFailed);
 
     r.notifyDesktopChanged();

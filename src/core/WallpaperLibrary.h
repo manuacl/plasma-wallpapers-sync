@@ -21,16 +21,18 @@ struct WallpaperEntry
  *
  * Two layout conventions are supported in a single pass:
  *
- *   1. *Package wallpapers* — `<root>/<name>/contents/images/*.<ext>`.
- *      The convention `/usr/share/wallpapers/` and most KDE-curated
- *      themes follow. Picks the alphabetically-first image inside the
- *      `contents/images/` dir for both the thumbnail and the apply
- *      path; Plasma's image renderer happily consumes any single
- *      resolution from a package.
+ *   1. *Package wallpapers* — a `contents/images/` directory under
+ *      any `<root>/<name>/` subdir, containing one or more image
+ *      files. The convention `/usr/share/wallpapers/` and most
+ *      KDE-curated themes follow. Picks the alphabetically-first
+ *      image inside `contents/images/` for both the thumbnail and
+ *      the apply path; Plasma's image renderer happily consumes any
+ *      single resolution from a package.
  *
- *   2. *Flat image files* — bare `<root>/*.<ext>` dropped directly in
- *      the search dir. Useful for the user's quick-drop spot at
- *      `~/.local/share/wallpapers/`.
+ *   2. *Flat image files* — bare image files dropped under `<root>/`
+ *      directly OR one level deep in a non-package subdir (e.g.
+ *      `~/.local/share/wallpapers/Personal/sunset.jpg`). Each image
+ *      becomes its own entry; the subdir name itself isn't shown.
  *
  * Default search paths: `/usr/share/wallpapers/` (the runtime's
  * bundle) and `$HOME/.local/share/wallpapers/`. Tests inject their

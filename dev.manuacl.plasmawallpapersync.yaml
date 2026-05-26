@@ -36,6 +36,15 @@ finish-args:
   - --filesystem=host:ro
   - --talk-name=org.kde.plasmashell
   - --talk-name=org.kde.screensaver
+  # End-to-end KAuth flow: the GUI dispatches a polkit Action request
+  # on the system bus to org.freedesktop.PolicyKit1, polkit prompts
+  # the user, then activates our helper at the dev.manuacl.plasmawallpapersync
+  # well-known name. Both names need to be reachable from inside the
+  # sandbox. The helper itself + polkit policy + activation file live
+  # on the host (installed by dev/install-host-helper.sh during dev,
+  # by the RPM/AUR package at v0.1.0 release time).
+  - --system-talk-name=org.freedesktop.PolicyKit1
+  - --system-talk-name=dev.manuacl.plasmawallpapersync
 
 cleanup:
   - /include

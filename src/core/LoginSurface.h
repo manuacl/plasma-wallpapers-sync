@@ -30,10 +30,26 @@ class LoginSurface : public WallpaperSurface
 {
     Q_OBJECT
 public:
+    /** Production constructor — read and write paths default to
+     *  Flatpak-aware values (see defaultReadPath / defaultWritePath). */
     explicit LoginSurface(PrivilegedWriter *writer, QObject *parent = nullptr);
+
+    /** Single-path constructor: both read and write target the same
+     *  file. Convenient for tests where a temp file plays both roles. */
     explicit LoginSurface(PrivilegedWriter *writer,
                           const QString &configPath,
                           QObject *parent = nullptr);
+
+    /** Explicit read/write decoupling for the Flatpak case: the
+     *  sandbox exposes the host's /etc/plasmalogin.conf at
+     *  /run/host/etc/plasmalogin.conf for reading, but the privileged
+     *  helper runs on the host and validates the path it writes to
+     *  against "/etc/plasmalogin.conf". */
+    explicit LoginSurface(PrivilegedWriter *writer,
+                          const QString &readPath,
+                          const QString &writePath,
+                          QObject *parent = nullptr);
+
     ~LoginSurface() override;
 
     QString id() const override;
@@ -45,10 +61,12 @@ public Q_SLOTS:
 
 private:
     void wireWriterSignals();
-    static QString defaultConfigPath();
+    static QString defaultReadPath();
+    static QString defaultWritePath();
 
     PrivilegedWriter *m_writer; // not owned
-    QString m_configPath;
+    QString m_readPath;
+    QString m_writePath;
 };
 
 #endif // PWS_CORE_LOGIN_SURFACE_H

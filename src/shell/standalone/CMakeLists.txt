@@ -9,6 +9,7 @@ target_link_libraries(plasma-wallpaper-sync
     PRIVATE
         pws_core
         pws_reload
+        pws_privileged_kauth
         pws_qml
         pws_qmlplugin
         Qt6::Core

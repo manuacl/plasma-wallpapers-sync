@@ -36,6 +36,13 @@ class PlasmaReloader : public QObject
     Q_OBJECT
 public:
     explicit PlasmaReloader(QObject *parent = nullptr);
+
+    /** Test/integration constructor: lets a caller point the desktop
+     *  notify at a non-default D-Bus service name. Production code
+     *  uses the single-arg form which targets `org.kde.plasmashell`. */
+    explicit PlasmaReloader(const QString &plasmashellService,
+                            QObject *parent = nullptr);
+
     ~PlasmaReloader() override;
 
 public Q_SLOTS:
@@ -45,6 +52,9 @@ public Q_SLOTS:
 
 Q_SIGNALS:
     void notificationFailed(const QString &surface, const QString &reason);
+
+private:
+    QString m_plasmashellService;
 };
 
 #endif // PWS_RELOAD_PLASMA_RELOADER_H

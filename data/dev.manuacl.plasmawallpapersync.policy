@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 Manuel Chamorro <manu.acl@gmail.com>
+SPDX-License-Identifier: GPL-2.0-or-later
+-->
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+    <vendor>Manuel Chamorro</vendor>
+    <vendor_url>https://github.com/manuacl/plasma-wallpapers-sync</vendor_url>
+
+    <action id="dev.manuacl.plasmawallpapersync.writefile">
+        <description>Update the login-screen wallpaper</description>
+        <message>Authentication is required to change the login screen wallpaper</message>
+        <defaults>
+            <allow_any>no</allow_any>
+            <allow_inactive>no</allow_inactive>
+            <allow_active>auth_admin</allow_active>
+        </defaults>
+    </action>
+</policyconfig>
