@@ -1,0 +1,108 @@
+# SPDX-FileCopyrightText: 2026 Manuel Chamorro <manu.acl@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+
+name: Release
+
+# Triggers on push of a v* tag (created by .github/workflows/version.yml
+# when a PR with a bump:* label is merged). Builds a source tarball,
+# smoke-tests its structure, and publishes a GitHub Release with
+# auto-generated notes from the merged PR titles since the previous
+# tag.
+#
+# The artifact is a source-distribution tarball — KDE Store / AppImage
+# packaging is a separate concern that will join this workflow once
+# the standalone shell is feature-complete.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Resolve tag and version
+        id: meta
+        env:
+          TAG_NAME: ${{ inputs.tag || github.ref_name }}
+        run: |
+          VERSION="${TAG_NAME#v}"
+          ARTIFACT="plasma-wallpapers-sync-${VERSION}.tar.gz"
+          echo "tag=$TAG_NAME"        >> $GITHUB_OUTPUT
+          echo "version=$VERSION"     >> $GITHUB_OUTPUT
+          echo "artifact=$ARTIFACT"   >> $GITHUB_OUTPUT
+
+      - name: Verify CMakeLists.txt version matches tag
+        env:
+          EXPECTED: ${{ steps.meta.outputs.version }}
+        run: |
+          ACTUAL=$(grep -oP '^[[:space:]]+VERSION[[:space:]]+\K[0-9]+\.[0-9]+\.[0-9]+' CMakeLists.txt | head -1)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::CMakeLists.txt VERSION ($ACTUAL) does not match tag (v$EXPECTED)"
+            exit 1
+          fi
+
+      - name: Build source tarball
+        env:
+          ARTIFACT: ${{ steps.meta.outputs.artifact }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          git archive --format=tar.gz \
+            --prefix="plasma-wallpapers-sync-${VERSION}/" \
+            -o "$ARTIFACT" HEAD
+          ls -lh "$ARTIFACT"
+
+      - name: Smoke-test the tarball
+        env:
+          ARTIFACT: ${{ steps.meta.outputs.artifact }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          tmpdir=$(mktemp -d)
+          tar -xzf "$ARTIFACT" -C "$tmpdir"
+          ROOT="$tmpdir/plasma-wallpapers-sync-${VERSION}"
+
+          for required in \
+              CMakeLists.txt \
+              README.md \
+              REUSE.toml \
+              LICENSES/GPL-2.0-or-later.txt \
+              src/core/SyncEngine.cpp \
+              src/reload/PlasmaReloader.cpp \
+              src/qml/Main.qml \
+              src/shell/standalone/main.cpp \
+              tests/CMakeLists.txt; do
+            test -e "$ROOT/$required" || { echo "::error::missing in tarball: $required"; exit 1; }
+          done
+
+          ACTUAL=$(grep -oP '^[[:space:]]+VERSION[[:space:]]+\K[0-9]+\.[0-9]+\.[0-9]+' "$ROOT/CMakeLists.txt" | head -1)
+          if [ "$ACTUAL" != "$VERSION" ]; then
+            echo "::error::tarball CMakeLists.txt VERSION ($ACTUAL) != tag ($VERSION)"
+            exit 1
+          fi
+
+          echo "Tarball OK ($(du -h "$ARTIFACT" | cut -f1))"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT: ${{ steps.meta.outputs.artifact }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          gh release create "$TAG" "$ARTIFACT" \
+            --title "Plasma Wallpaper Sync v$VERSION" \
+            --generate-notes
