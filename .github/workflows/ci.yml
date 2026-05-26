@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: 2026 Manuel Chamorro <manu.acl@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
+#
+# Local dev runs inside org.kde.Sdk//6.10 via dev/build.sh. CI runs
+# the same build in a Fedora 42 container that has Qt6 + KF6 dev
+# packages directly from dnf — faster than re-downloading the 1.5 GB
+# Flatpak SDK on every run, and the version matrix (Qt 6.8+, KF6 6.x)
+# stays close enough to the Plasma 6.10 target.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reuse:
+    name: REUSE compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fsfe/reuse-action@v5
+
+  build-and-test:
+    name: Build and test (Fedora 42 / Qt6 / KF6)
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:42
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git \
+            cmake \
+            ninja-build \
+            gcc-c++ \
+            extra-cmake-modules \
+            qt6-qtbase-devel \
+            qt6-qtdeclarative-devel \
+            qt6-qttools-devel \
+            kf6-kconfig-devel \
+            kf6-kcoreaddons-devel \
+            kf6-ki18n-devel \
+            kf6-kirigami-devel \
+            kf6-kauth-devel
+
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -G Ninja -B build -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run unit tests
+        run: ctest --test-dir build --output-on-failure --verbose
