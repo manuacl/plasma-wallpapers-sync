@@ -52,7 +52,7 @@ find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
 # so the layering rule (see CLAUDE.md) stays visible in the build graph:
 # core/ must not link KAuth/Kirigami/DBus.
 #
-# add_subdirectory(src/core)
+add_subdirectory(src/core)
 # add_subdirectory(src/privileged/kauth)
 # add_subdirectory(src/reload)
 # add_subdirectory(src/helper)
@@ -62,6 +62,6 @@ find_package(KF6 ${KF6_MIN_VERSION} REQUIRED COMPONENTS
 # add_subdirectory(po)
 
 enable_testing()
-# add_subdirectory(tests)
+add_subdirectory(tests)
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
