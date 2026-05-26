@@ -1,0 +1,23 @@
+version = 1
+
+# Default: everything is GPL-2.0-or-later, copyright Manu.
+# Per-file SPDX headers in source files override this aggregate
+# annotation (precedence = "aggregate" means headers win).
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Manuel Chamorro <manu.acl@gmail.com>"
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+# Build/meta files are tooling artifacts, not creative work.
+# Mark them CC0-1.0 so REUSE doesn't claim copyleft scope over a .gitignore.
+[[annotations]]
+path = [
+    ".gitignore",
+    ".clang-format",
+    "REUSE.toml",
+    "CMakeLists.txt",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Manuel Chamorro <manu.acl@gmail.com>"
+SPDX-License-Identifier = "CC0-1.0"

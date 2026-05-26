@@ -1,0 +1,36 @@
+# Build dirs
+build/
+build-*/
+.cache/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+Makefile
+compile_commands.json
+
+# Qt build artifacts
+*.user
+*.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+.qmlls.ini
+
+# IDEs / editors
+.vscode/
+.idea/
+.kdev4/
+*.kdev4
+*~
+*.swp
+*.swo
+
+# OS
+.DS_Store
