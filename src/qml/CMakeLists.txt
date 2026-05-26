@@ -11,4 +11,5 @@ qt_add_qml_module(pws_qml
     STATIC
     QML_FILES
         Main.qml
+        WallpaperPicker.qml
 )

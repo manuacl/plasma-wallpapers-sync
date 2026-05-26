@@ -4,6 +4,7 @@
 #include "DesktopSurface.h"
 #include "LockscreenSurface.h"
 #include "SyncEngine.h"
+#include "WallpaperLibrary.h"
 
 #include <QGuiApplication>
 #include <QIcon>
@@ -40,8 +41,11 @@ int main(int argc, char **argv)
     engine.addSurface(&desktop);
     engine.addSurface(&lockscreen);
 
+    WallpaperLibrary wallpapers;
+
     QQmlApplicationEngine qmlEngine;
     qmlEngine.rootContext()->setContextProperty(QStringLiteral("syncEngine"), &engine);
+    qmlEngine.rootContext()->setContextProperty(QStringLiteral("wallpaperLibrary"), &wallpapers);
     qmlEngine.loadFromModule(QStringLiteral("PlasmaWallpaperSync"),
                               QStringLiteral("Main"));
     if (qmlEngine.rootObjects().isEmpty()) {
