@@ -7,6 +7,7 @@ add_library(pws_core STATIC
     LockscreenSurface.cpp
     LoginSurface.cpp
     PrivilegedWriter.cpp
+    SyncEngine.cpp
 )
 
 target_link_libraries(pws_core
