@@ -258,62 +258,15 @@ Kirigami.ApplicationWindow {
                     }
                 }
 
-                // Placeholder for the future splash surface — keeps the
-                // 2×2 grid visually balanced while only 3 surfaces are
-                // implemented. Hidden once a 4th (or more) surface exists.
-                Pane {
+                // Empty 4th slot — the session splash surface is
+                // deliberately not yet implemented (Plasma's splash is
+                // theme-based, not image-based; reconciling that with
+                // the "one image, four surfaces" model is deferred).
+                // The empty pane keeps the 2×2 grid visually balanced.
+                Item {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 0
-                    Layout.alignment: Qt.AlignTop
                     visible: syncEngine.surfaceIds.length < 4
-                    opacity: 0.5
-
-                    contentItem: ColumnLayout {
-                        spacing: Kirigami.Units.smallSpacing
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-
-                            Kirigami.Heading {
-                                level: 3
-                                text: qsTr("Session splash")
-                            }
-
-                            Kirigami.Icon {
-                                source: "documentinfo-symbolic"
-                                implicitWidth: Kirigami.Units.iconSizes.small
-                                implicitHeight: Kirigami.Units.iconSizes.small
-                                opacity: 0.6
-
-                                HoverHandler { id: splashInfoHover }
-                                ToolTip.visible: splashInfoHover.hovered
-                                ToolTip.delay: Kirigami.Units.toolTipDelay
-                                ToolTip.text: qsTr("Shown after login while Plasma loads your panels and widgets — not the boot logo (that one is Plymouth, a system-level theme outside this tool's scope).")
-                            }
-
-                            Item { Layout.fillWidth: true }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: width * 9 / 16
-                            color: Kirigami.Theme.alternateBackgroundColor
-                            radius: Kirigami.Units.smallSpacing
-
-                            Label {
-                                anchors.centerIn: parent
-                                opacity: 0.6
-                                text: qsTr("(coming soon)")
-                            }
-                        }
-
-                        Label {
-                            Layout.fillWidth: true
-                            text: " "
-                            font.family: "monospace"
-                        }
-                    }
                 }
             }
         }
