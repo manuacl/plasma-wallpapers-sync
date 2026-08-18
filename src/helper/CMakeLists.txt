@@ -90,17 +90,26 @@ if(NOT _pws_is_flatpak_install)
 
     kauth_install_actions("${APP_ID}" "${_pws_policy_src}")
 
-    # Check whether kauth-policy-gen produced a usable policy.
-    # A broken generator emits only the XML/DOCTYPE wrapper with no
-    # <action> elements — detect that and install the source directly.
-    file(READ "${_pws_policy_generated}" _pws_policy_content)
-    string(FIND "${_pws_policy_content}" "<action" _pws_has_actions)
-    if(_pws_has_actions EQUAL -1)
-        message(WARNING
-            "kauth-policy-gen produced an empty policy — installing source "
-            "file directly as fallback: ${_pws_policy_src}")
-        install(FILES "${_pws_policy_src}"
-            DESTINATION "${KAUTH_POLICY_FILES_INSTALL_DIR}"
-        )
-    endif()
+    # At install time, check whether kauth-policy-gen produced a usable
+    # policy. The generated file only exists after the build (custom
+    # command from kauth_install_actions), so we cannot file(READ) it
+    # at configure time. A broken generator emits only the XML/DOCTYPE
+    # wrapper with no <action> elements — detect that and install the
+    # source directly, which is already valid polkit policy XML.
+    install(CODE "
+        set(_policy_file \"\${CMAKE_CURRENT_BINARY_DIR}/${APP_ID}.policy\")
+        if(EXISTS \"\${_policy_file}\")
+            file(READ \"\${_policy_file}\" _pws_content)
+            string(FIND \"\${_pws_content}\" \"<action\" _pws_has_actions)
+            if(_pws_has_actions EQUAL -1)
+                message(STATUS \"kauth-policy-gen produced an empty policy — installing source as fallback\")
+                file(INSTALL DESTINATION \"${KAUTH_POLICY_FILES_INSTALL_DIR}\"
+                     FILES \"${_pws_policy_src}\")
+            endif()
+        else()
+            message(WARNING \"Generated policy file not found — installing source as fallback\")
+            file(INSTALL DESTINATION \"${KAUTH_POLICY_FILES_INSTALL_DIR}\"
+                 FILES \"${_pws_policy_src}\")
+        endif()
+    ")
 endif()
